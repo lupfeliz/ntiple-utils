@@ -1,0 +1,30 @@
+/**
+ * @File        : build.gradle
+ * @Version     : $Rev$
+ * @Author      : 정재백
+ * @History     : 2024-03-07 최초 작성
+ * @Description : gradle 빌드 파일
+ **/
+
+plugins {
+  id 'java'
+}
+
+group = 'com.ntiple'
+version = '0.0.1-SNAPSHOT'
+
+java {
+  sourceCompatibility = '17'
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  testImplementation 'junit:junit:4.13.2'
+}
+
+tasks.named('test') {
+  useJUnitPlatform()
+}
