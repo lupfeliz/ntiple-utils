@@ -14,14 +14,15 @@ import static com.ntiple.commons.IOUtils.writer;
 import java.io.BufferedWriter;
 import java.io.InputStream;
 import java.io.Writer;
+import java.util.function.BiFunction;
 
 // import lombok.extern.slf4j.Slf4j;
 
 // @Slf4j
 public class ProcUtil {
   
-  public static String execRawCmd(Runtime rtm, String[] cmd, byte[] buf) throws Exception { return execRawCmd(rtm, cmd, buf, true, -1); }
-  public static String execRawCmd(Runtime rtm, String[] cmd, byte[] buf, boolean errstop, long wait) throws Exception {
+  public static String execRawCmd(Runtime rtm, String[] cmd, byte[] buf) throws Exception { return execRawCmd(rtm, cmd, buf, true, -1, null); }
+  public static String execRawCmd(Runtime rtm, String[] cmd, byte[] buf, boolean errstop, long wait, BiFunction<StringBuilder, StringBuilder, Boolean> fnfailed) throws Exception {
     String ret = null;
     InputStream istream = null;
     InputStream estream = null;
@@ -29,7 +30,7 @@ public class ProcUtil {
     Process prc = null;
     StringBuilder isb = new StringBuilder();
     StringBuilder esb = new StringBuilder();
-    LOOP: for (int retry = 0; retry < 3; retry ++) {
+    RETRY_LOOP: for (int retry = 0; retry < 3; retry ++) {
       try {
         // log.trace("EXECUTE-CMD:{}{}", "", cmd);
         prc = rtm.exec(cmd);
@@ -53,10 +54,13 @@ public class ProcUtil {
         // log.trace("ERR:{}", esb);
         ret = String.valueOf(isb);
         if (esb.length() > 0 && errstop) {
+          if (fnfailed != null && fnfailed.apply(isb, esb)) {
+            continue RETRY_LOOP;
+          }
           // log.error("ERROR:{} / {} / {}", cmd, errstop, esb);
           throw new RuntimeException("ERROR! EXEC CMD");
         } else {
-          break LOOP;
+          break RETRY_LOOP;
         }
       } finally {
         safeclose(writer);
