@@ -9,39 +9,66 @@ package com.ntiple.commons;
 
 import static com.ntiple.commons.Constants.UTF8;
 import static com.ntiple.commons.IOUtils.safeclose;
+import static com.ntiple.commons.IOUtils.writer;
 
+import java.io.BufferedWriter;
 import java.io.InputStream;
+import java.io.Writer;
 
 // import lombok.extern.slf4j.Slf4j;
 
 // @Slf4j
 public class ProcUtil {
   
-  public static String execRawCmd(Runtime rtm, String[] cmd, byte[] buf) throws Exception {
+  public static String execRawCmd(Runtime rtm, String[] cmd, byte[] buf) throws Exception { return execRawCmd(rtm, cmd, buf, true, -1); }
+  public static String execRawCmd(Runtime rtm, String[] cmd, byte[] buf, boolean errstop, long wait) throws Exception {
     String ret = null;
     InputStream istream = null;
     InputStream estream = null;
-    Process prc;
+    BufferedWriter writer = null;
+    Process prc = null;
     StringBuilder isb = new StringBuilder();
     StringBuilder esb = new StringBuilder();
-    try {
-      // log.info("EXECUTE-CMD:{}{}", "", cmd);
-      prc = rtm.exec(cmd);
-      istream = prc.getInputStream();
-      estream = prc.getErrorStream();
-      for (int rl; (rl = istream.read(buf, 0, buf.length)) != -1; isb.append(new String(buf, 0, rl, UTF8)));
-      for (int rl; (rl = estream.read(buf, 0, buf.length)) != -1; esb.append(new String(buf, 0, rl, UTF8)));
-      // log.trace("STD:{}", isb);
-      // log.trace("ERR:{}", esb);
-      ret = String.valueOf(isb);
-      if (esb.length() > 0) {
-        // log.error("ERROR:{}", esb);
-        throw new RuntimeException("");
+    LOOP: for (int retry = 0; retry < 3; retry ++) {
+      try {
+        // log.trace("EXECUTE-CMD:{}{}", "", cmd);
+        prc = rtm.exec(cmd);
+        if (wait != -1) { prc.wait(wait); }
+        istream = prc.getInputStream();
+        estream = prc.getErrorStream();
+        writer = writer(prc.getOutputStream(), UTF8);
+        final Writer WR = writer;
+        new Thread() {
+          @Override public void run() {
+            try {
+              sleep(1000);
+              WR.append("\r\n").flush();
+            } catch (Exception ignore) { }
+          }
+        }.start();
+
+        for (int rl; (rl = istream.read(buf, 0, buf.length)) != -1; isb.append(new String(buf, 0, rl, UTF8)));
+        for (int rl; (rl = estream.read(buf, 0, buf.length)) != -1; esb.append(new String(buf, 0, rl, UTF8)));
+        // log.trace("STD:{}", isb);
+        // log.trace("ERR:{}", esb);
+        ret = String.valueOf(isb);
+        if (esb.length() > 0 && errstop) {
+          // log.error("ERROR:{} / {} / {}", cmd, errstop, esb);
+          throw new RuntimeException("ERROR! EXEC CMD");
+        } else {
+          break LOOP;
+        }
+      } finally {
+        safeclose(writer);
+        safeclose(istream);
+        safeclose(estream);
+        if (prc != null) { try { prc.destroy(); } catch (Exception ignore) { } }
       }
-    } finally {
-      safeclose(istream);
-      safeclose(estream);
     }
     return ret;
+  }
+
+  public static void sleep(long ms) {
+    try { Thread.sleep(ms); } catch (Exception ignore) { }
   }
 }
