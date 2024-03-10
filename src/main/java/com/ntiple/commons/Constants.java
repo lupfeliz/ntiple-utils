@@ -28,6 +28,8 @@ public interface Constants {
   static final String S_HTTP = "http";
   static final String S_HTTPS = "https";
   static final String TIMEOUT = "timeout";
+  static final String TLS = "TLS";
   static final String UTF8 = "UTF-8";
   static final String X_FORWARDED_FOR = "X-Forwarded-For";
+
 }
