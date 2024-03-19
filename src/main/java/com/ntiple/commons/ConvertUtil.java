@@ -1251,10 +1251,10 @@ public class ConvertUtil {
     T ret = target;
     if (target == null) { return ret; }
     Class<?> cls = target.getClass();
-    Field[] fields = cls.getFields();
-    for (Field field : fields) {
+    Field[] fields = cls.getDeclaredFields();
+    LOOP_FLD: for (Field field : fields) {
       Annotation[] anons = field.getAnnotations();
-      for (Annotation anon : anons) {
+      LOOP_ANO: for (Annotation anon : anons) {
         String annm = anon.annotationType().getName();
         if (CLS_NAME_SPRING_ANNOTATION_VALUE.equals(annm)) {
           // log.debug("ANON:{} / {}", anon.annotationType().getName(), anon);
@@ -1262,18 +1262,25 @@ public class ConvertUtil {
           String stptn = anon.toString();
           Matcher mat = PTN_SPRING_PLACEHOLDER.matcher(stptn);
           if (mat.find()) {
-            String mnm = cat("set", capitalize(field.getName()));
+            String msm = cat("set", capitalize(field.getName()));
+            String mgm = cat("get", capitalize(field.getName()));
             String vnm = mat.group("name");
             String dfv = mat.group("defv");
-            Method mtd = null;
+            Method mts = null;
+            Method mtg = null;
             Object itm = null;
             Class<?> fty = field.getType();
             // log.debug("FIELD[{}] = {} / {}:{}", mnm, fty, vnm, dfv);
             try {
-              mtd = cls.getMethod(mnm, new Class<?>[] { fty });
+              mts = cls.getMethod(msm, new Class<?>[] { fty });
+              mtg = cls.getMethod(mgm, EMPTY_CLS);
               itm = map.get(vnm);
               if (itm == null) { itm = getCascade(map, vnm.split("[.]")); }
-              if (mtd != null) {
+              /** 입력할 값이 없고 기존값이 있다면 기존값 유지 */
+              if (itm == null && mtg.invoke(target, EMPTY_OBJ) != null) { continue LOOP_FLD; } 
+              /** 입력할 값이 없고 기존값도 없다면 기본입력값 대입 */
+              if (itm == null && dfv != null) { itm = dfv; }
+              if (mts != null) {
                 if (
                   ((fty == int.class | fty == Integer.class) 
                     && (itm = parseInt(itm, null)) != null) ||
@@ -1294,13 +1301,15 @@ public class ConvertUtil {
                 } else {
                   itm = parseStr(itm, null);
                 }
-                if (itm == null && dfv != null) { itm = dfv; }
-                mtd.invoke(target, new Object[] { itm });
+                mts.invoke(target, new Object[] { itm });
               }
-            } catch (Exception ignore) { }
+            } catch (Exception e) {
+            }
           }
         }
+        continue LOOP_ANO;
       }
+      continue LOOP_FLD;
     }
     return ret;
   }
