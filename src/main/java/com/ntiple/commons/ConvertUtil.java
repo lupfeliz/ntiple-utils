@@ -7,6 +7,7 @@
  **/
 package com.ntiple.commons;
 
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -1239,6 +1240,67 @@ public class ConvertUtil {
         break;
       }
       src = src.substring(0, st) + replace + src.substring(st + find.length());
+    }
+    return ret;
+  }
+
+  private static final Pattern PTN_SPRING_PLACEHOLDER = Pattern.compile("\"\\$\\{(?<name>[a-zA-Z0-9_.]+)(:(?<defv>.*)){0,1}\\}\"");
+  private static final String CLS_NAME_SPRING_ANNOTATION_VALUE = "org.springframework.beans.factory.annotation.Value";
+
+  public static <T> T mappingSpringValues(Map<String, Object> map, T target) {
+    T ret = target;
+    if (target == null) { return ret; }
+    Class<?> cls = target.getClass();
+    Field[] fields = cls.getFields();
+    for (Field field : fields) {
+      Annotation[] anons = field.getAnnotations();
+      for (Annotation anon : anons) {
+        String annm = anon.annotationType().getName();
+        if (CLS_NAME_SPRING_ANNOTATION_VALUE.equals(annm)) {
+          // log.debug("ANON:{} / {}", anon.annotationType().getName(), anon);
+          // Value value = cast(anon, value = null);
+          String stptn = anon.toString();
+          Matcher mat = PTN_SPRING_PLACEHOLDER.matcher(stptn);
+          if (mat.find()) {
+            String mnm = cat("set", capitalize(field.getName()));
+            String vnm = mat.group("name");
+            String dfv = mat.group("defv");
+            Method mtd = null;
+            Object itm = null;
+            Class<?> fty = field.getType();
+            // log.debug("FIELD[{}] = {} / {}:{}", mnm, fty, vnm, dfv);
+            try {
+              mtd = cls.getMethod(mnm, new Class<?>[] { fty });
+              itm = map.get(vnm);
+              if (itm == null) { itm = getCascade(map, vnm.split("[.]")); }
+              if (mtd != null) {
+                if (
+                  ((fty == int.class | fty == Integer.class) 
+                    && (itm = parseInt(itm, null)) != null) ||
+                  ((fty == long.class || fty == Long.class)
+                    && (itm = parseLong(itm, null)) != null) ||
+                  ((fty == short.class || fty == Short.class)
+                    && (itm = parseShort(itm, null)) != null) ||
+                  ((fty == byte.class || fty == Byte.class)
+                    && (itm = parseByte(itm, null)) != null) ||
+                  ((fty == float.class || fty == Float.class)
+                    && (itm = parseFloat(itm, null)) != null) ||
+                  ((fty == double.class || fty == Double.class)
+                    && (itm = parseDouble(itm, null)) != null) ||
+                  ((fty == boolean.class || fty == Boolean.class)
+                    && (itm = parseBoolean(itm, null)) != null)
+                  ) {
+                  /** NO-OP */
+                } else {
+                  itm = parseStr(itm, null);
+                }
+                if (itm == null && dfv != null) { itm = dfv; }
+                mtd.invoke(target, new Object[] { itm });
+              }
+            } catch (Exception ignore) { }
+          }
+        }
+      }
     }
     return ret;
   }
