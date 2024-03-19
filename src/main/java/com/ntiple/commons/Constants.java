@@ -31,5 +31,4 @@ public interface Constants {
   static final String TLS = "TLS";
   static final String UTF8 = "UTF-8";
   static final String X_FORWARDED_FOR = "X-Forwarded-For";
-
 }
