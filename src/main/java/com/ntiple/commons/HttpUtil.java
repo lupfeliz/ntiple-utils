@@ -7,6 +7,7 @@
  **/
 package com.ntiple.commons;
 
+import static com.ntiple.commons.Constants.ALPHANUM;
 import static com.ntiple.commons.Constants.CHARSET;
 import static com.ntiple.commons.Constants.CONTENT_TYPE;
 import static com.ntiple.commons.Constants.CTYPE_FILE;
@@ -20,6 +21,7 @@ import static com.ntiple.commons.IOUtils.passthrough;
 import static com.ntiple.commons.IOUtils.readAsString;
 import static com.ntiple.commons.IOUtils.reader;
 import static com.ntiple.commons.IOUtils.safeclose;
+import static com.ntiple.commons.ValuesUtil.random;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -29,6 +31,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.CookieHandler;
 import java.net.CookieManager;
+import java.net.CookiePolicy;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.net.Socket;
@@ -44,6 +47,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
@@ -166,7 +170,7 @@ public class HttpUtil {
 
     if (ckhnd == null) {
       CookieManager ckmng = new CookieManager();
-      // CookieManager ckmng = new CookieManager(null, java.net.CookiePolicy.ACCEPT_NONE);
+      ckmng.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
       CookieHandler.setDefault(ckmng);
       ckhnd = CookieHandler.getDefault();
       // log.debug("COOKIE-HANDLER:{}", ckhnd);
@@ -187,9 +191,7 @@ public class HttpUtil {
 
     ret = HttpClient.newBuilder()
       .version(version)
-      // .sslContext(sslContext)
       .proxy(proxy)
-      // .followRedirects(HttpClient.Redirect.ALWAYS)
       .followRedirects(HttpClient.Redirect.NORMAL)
       .cookieHandler(ckhnd);
 
@@ -225,12 +227,9 @@ public class HttpUtil {
     return ret;
   }
 
-  public static HttpResponse<InputStream> httpExecute(HttpClient client, HttpRequest request) throws Exception {
+  public static HttpResponse<InputStream> httpExecute(
+    HttpClient client, HttpRequest request) throws Exception {
     HttpResponse<InputStream> ret = client.send(request, BodyHandlers.ofInputStream());
-      // .sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
-      // .thenApply(HttpResponse::body)
-      // .thenAccept(istream -> {
-      // });
     return ret;
   }
 
@@ -270,25 +269,25 @@ public class HttpUtil {
     return readAsString(response.body(), enc);
   }
 
-  // public static BodyPublisher nameValueBody(String[][] arg, String enc) throws Exception {
-  //   BodyPublisher ret = null;
-  //   ret = BodyPublishers.ofString("", Charset.forName(enc));
-  //   // List<NameValuePair> list = new LinkedList<>();
-  //   // for (String[] kv : arg) {
-  //   //   if (kv.length >= 2 && kv[0] != null && kv[1] != null) {
-  //   //     list.add(new BasicNameValuePair(kv[0], kv[1]));
-  //   //   }
-  //   // }
-  //   // entity = new UrlEncodedFormEntity(list, enc);
-  //   return ret;
-  // }
+  public static BodyPublisher stringBody(String body) { return stringBody(body, UTF8); }
+  public static BodyPublisher stringBody(String body, String enc) {
+    return BodyPublishers.ofString(body, Charset.forName(enc));
+  }
+
+  public static BodyPublisher nameValueBody(String[][] arg) throws Exception { return nameValueBody(arg, UTF8); }
+  public static BodyPublisher nameValueBody(String[][] arg, String enc) throws Exception {
+    String body = urlParamString(arg, enc);
+    if (body.length() > 1) { body = body.substring(1); }
+    return BodyPublishers.ofString(body, Charset.forName(enc));
+  }
 
   public static class MultipartBuilder {
-    // WebKitFormBoundaryQGvWeNAiOE4g2VM5
+    private HttpRequest.Builder request;
     private String boundary;
     private List<Object[]> data;
-    public MultipartBuilder(String boundary) {
-      this.boundary = boundary;
+    public MultipartBuilder(HttpRequest.Builder request) {
+      this.request = request;
+      this.boundary = cat("BrowserFormBoundary", random(ALPHANUM, 16));
       data = new ArrayList<>();
     }
     public MultipartBuilder add(String name, Object value) {
@@ -299,7 +298,7 @@ public class HttpUtil {
       data.add(new Object[] { name, value, fname, ftype });
       return this;
     }
-    public BodyPublisher build() throws Exception {
+    public HttpRequest.Builder build() throws Exception {
       /** Result request body */
       List<byte[]> raw = new ArrayList<>();
       String fname, ftype;
@@ -353,66 +352,50 @@ public class HttpUtil {
       raw.add(cat("--", boundary, "--").getBytes(UTF8));
 
       // for (byte[] buf : raw) { System.out.print(new String(buf, UTF8)); }
-      /** Serializing as byte array */
-      return BodyPublishers.ofByteArrays(raw);
+      return request
+        .header(Constants.CONTENT_TYPE,
+          cat(Constants.CTYPE_MULTIPART, "; boundary=", boundary))
+        /** Serializing as byte array */
+        .POST(BodyPublishers.ofByteArrays(raw))
+      ;
     }
   }
 
-  public static MultipartBuilder multipart(String boundary) {
-    return new MultipartBuilder(boundary);
+  public static MultipartBuilder multipart(HttpRequest.Builder request) {
+    return new MultipartBuilder(request);
   }
+
   /** Multipart 를 사용하기 위한 테스트코드 */
   // @Test public void testPublish() throws Exception {
-  //   String boundary = "WebKitFormBoundaryQGvWeNAiOE4g2VM5";
   //   String str = HttpUtil.httpContentStr(
   //     HttpUtil.httpExecute(
   //       HttpUtil.httpclient(null, true, 1, null, null)
   //       .build(),
-  //       // HttpUtil.request("https://nexus.ntiple.com/#browse/browse:maven-test", null)
-  //       HttpUtil.request("http://localhost:8080/api/tst01001001", new String[][] {
-  //           { CONTENT_TYPE, cat(CTYPE_MULTIPART, "; boundary=", boundary) },
-  //         })
-  //         .POST(HttpUtil.multipart(boundary)
-  //           .add("test", "1234")
-  //           .add("file", new byte[] { 1, 2, 3, 4 })
-  //         .build())
-  //       .build())
+  //       HttpUtil.multipart(
+  //         HttpUtil.request("http://localhost:8080/api/tst01001001", new String[][] { }))
+  //         .add("test", "1234")
+  //         .add("file", new byte[] { 'a', 'b', 'c', 'd' })
+  //       .build()
+  //     .build())
   //   );
-  //   System.out.println(cat("CHECK:", str));
+  //   // System.out.println(cat("CHECK:", str));
   //   assertTrue(true);
-  // }
-
-
-  // public static UrlEncodedFormEntity nameValueEntity(Map<String, Object> map, String enc) throws Exception {
-  //   UrlEncodedFormEntity entity = null;
-  //   List<NameValuePair> list = new LinkedList<>();
-  //   for (String key : map.keySet()) {
-  //     list.add(new BasicNameValuePair(key, String.valueOf(map.get(key))));
-  //   }
-  //   entity = new UrlEncodedFormEntity(list, enc);
-  //   return entity;
-  // }
-
-  // public static HttpEntity stringEntity(Object param, String type, String enc) throws Exception {
-  //   StringEntity entity = new StringEntity(String.valueOf(param), enc);
-  //   entity.setContentType(cat(type, ";charset=", enc));
-  //   return entity;
   // }
 
   public static String urlParamString(String[][] arg, String enc) throws Exception {
     StringBuilder ret = new StringBuilder();
     for (String[] kv : arg) {
       if (kv.length >= 2 && kv[0] != null && kv[1] != null) {
-        if (ret.length() == 0) {
-          ret.append("?");
-        } else {
-          ret.append("&");
-        }
+        if (ret.length() > 0) { ret.append("&"); }
         ret.append(URLEncoder.encode(kv[0], enc))
           .append("=").append(URLEncoder.encode(kv[1], enc));
       }
     }
-    return String.valueOf(ret);
+    if (ret.length() > 0) {
+      return cat("?", ret);
+    } else {
+      return String.valueOf(ret);
+    }
   }
 
   // public static void copyHeaders(HttpServletRequest requestf, HttpRequestBase requestt) throws Exception {
