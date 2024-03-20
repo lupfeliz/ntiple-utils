@@ -14,7 +14,10 @@ group = 'com.ntiple'
 version = '0.0.2-5'
 
 java {
-  sourceCompatibility = '17'
+  // sourceCompatibility = '8'
+  // targetCompatibility = '8'
+  sourceCompatibility = '11'
+  targetCompatibility = '11'
 }
 
 jar {
@@ -26,10 +29,23 @@ repositories {
 }
 
 dependencies {
+  annotationProcessor 'org.projectlombok:lombok:1.18.30'
+  compileOnly 'org.projectlombok:lombok:1.18.30'
+
   testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
   testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
+}
+
+task copyJars(type: Copy) {
+  dependsOn(jar)
+  from (configurations.runtimeClasspath) { include "*.jar" }
+  from(jar.archivePath) { include "*.jar" }
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+  into "${buildDir}/libs"
 }
 
 tasks.named('test') {
   useJUnitPlatform()
 }
+
+build.dependsOn(copyJars)

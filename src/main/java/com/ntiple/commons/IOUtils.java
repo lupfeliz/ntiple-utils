@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.CharBuffer;
 import java.util.ArrayList;
@@ -37,13 +38,25 @@ import java.util.stream.Stream;
 // import lombok.extern.slf4j.Slf4j;
 
 public class IOUtils {
-  public static final int passthrough(InputStream istream, OutputStream ostream) throws Exception {
+  public static final int passthrough(InputStream istream, OutputStream ostream) throws IOException {
     int ret = 0;
     if (istream != null && ostream != null) {
       byte[] buf = new byte[4096];
       for (int rl; (rl = istream.read(buf, 0, buf.length)) != -1;) {
         ret += rl;
         ostream.write(buf, 0, rl);
+      }
+    }
+    return ret;
+  }
+
+  public static final int passthrough(Reader reader, Writer writer) throws IOException {
+    int ret = 0;
+    if (reader != null && writer != null) {
+      char[] buf = new char[4096];
+      for (int rl; (rl = reader.read(buf, 0, buf.length)) != -1;) {
+        ret += rl;
+        writer.write(buf, 0, rl);
       }
     }
     return ret;
@@ -268,12 +281,20 @@ public class IOUtils {
     public String toString() { return reader.toString(); }
     public String readLine() throws IOException { return reader.readLine(); }
     public long skip(long n) throws IOException { return reader.skip(n); }
-    public long transferTo(Writer out) throws IOException { return reader.transferTo(out); }
     public boolean ready() throws IOException { return reader.ready(); }
     public boolean markSupported() { return reader.markSupported(); }
     public void mark(int readAheadLimit) throws IOException { reader.mark(readAheadLimit); }
     public void reset() throws IOException { reader.reset(); }
     public Stream<String> lines() { return reader.lines(); }
+    public long transferTo(Writer out) throws IOException {
+      try {
+        Method mtd = BufferedReader.class.getDeclaredMethod("transferTo", new Class<?>[] { Writer.class });
+        if (mtd != null) { return cast(mtd.invoke(reader, new Object[] { out }), 0L); }
+      } catch (Exception e) {
+        passthrough(reader, out);
+      }
+      return 0L;
+    }
     public void close() throws IOException {
       reader.close();
       if (closeables != null && closeables.size() > 0) {
