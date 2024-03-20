@@ -9,16 +9,20 @@ package com.ntiple.commons;
 
 import static com.ntiple.commons.Constants.CHARSET;
 import static com.ntiple.commons.Constants.CONTENT_TYPE;
+import static com.ntiple.commons.Constants.CTYPE_FILE;
 import static com.ntiple.commons.Constants.CTYPE_FORM;
 import static com.ntiple.commons.Constants.S_HTTP;
 import static com.ntiple.commons.Constants.S_HTTPS;
 import static com.ntiple.commons.Constants.UTF8;
 import static com.ntiple.commons.ConvertUtil.cat;
 import static com.ntiple.commons.ConvertUtil.parseStr;
+import static com.ntiple.commons.IOUtils.passthrough;
 import static com.ntiple.commons.IOUtils.readAsString;
 import static com.ntiple.commons.IOUtils.reader;
+import static com.ntiple.commons.IOUtils.safeclose;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -28,6 +32,7 @@ import java.net.CookieManager;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.net.Socket;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLDecoder;
@@ -35,10 +40,10 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
@@ -59,7 +64,6 @@ import javax.net.ssl.X509ExtendedTrustManager;
 /**
  * 미완성 클래스 (현시점 사용불가)
  */
-@Deprecated
 public class HttpUtil {
 
   private static HttpUtil instance;
@@ -164,6 +168,7 @@ public class HttpUtil {
       CookieManager ckmng = new CookieManager();
       // CookieManager ckmng = new CookieManager(null, java.net.CookiePolicy.ACCEPT_NONE);
       CookieHandler.setDefault(ckmng);
+      ckhnd = CookieHandler.getDefault();
       // log.debug("COOKIE-HANDLER:{}", ckhnd);
     }
 
@@ -209,6 +214,7 @@ public class HttpUtil {
   public static HttpRequest.Builder request(String uri, String[][] headers) {
     HttpRequest.Builder ret = null;
     ret = HttpRequest.newBuilder();
+    ret.uri(URI.create(uri));
     if (headers != null) {
       for (String[] header : headers) {
         if (header != null && header.length > 1) {
@@ -216,6 +222,15 @@ public class HttpUtil {
         }
       }
     }
+    return ret;
+  }
+
+  public static HttpResponse<InputStream> httpExecute(HttpClient client, HttpRequest request) throws Exception {
+    HttpResponse<InputStream> ret = client.send(request, BodyHandlers.ofInputStream());
+      // .sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
+      // .thenApply(HttpResponse::body)
+      // .thenAccept(istream -> {
+      // });
     return ret;
   }
 
@@ -255,49 +270,118 @@ public class HttpUtil {
     return readAsString(response.body(), enc);
   }
 
-  public static BodyPublisher nameValueBody(String[][] arg, String enc) throws Exception {
-    BodyPublisher ret = null;
-    ret = BodyPublishers.ofString("", Charset.forName(enc));
-    // List<NameValuePair> list = new LinkedList<>();
-    // for (String[] kv : arg) {
-    //   if (kv.length >= 2 && kv[0] != null && kv[1] != null) {
-    //     list.add(new BasicNameValuePair(kv[0], kv[1]));
-    //   }
-    // }
-    // entity = new UrlEncodedFormEntity(list, enc);
-    return ret;
+  // public static BodyPublisher nameValueBody(String[][] arg, String enc) throws Exception {
+  //   BodyPublisher ret = null;
+  //   ret = BodyPublishers.ofString("", Charset.forName(enc));
+  //   // List<NameValuePair> list = new LinkedList<>();
+  //   // for (String[] kv : arg) {
+  //   //   if (kv.length >= 2 && kv[0] != null && kv[1] != null) {
+  //   //     list.add(new BasicNameValuePair(kv[0], kv[1]));
+  //   //   }
+  //   // }
+  //   // entity = new UrlEncodedFormEntity(list, enc);
+  //   return ret;
+  // }
+
+  public static class MultipartBuilder {
+    // WebKitFormBoundaryQGvWeNAiOE4g2VM5
+    private String boundary;
+    private List<Object[]> data;
+    public MultipartBuilder(String boundary) {
+      this.boundary = boundary;
+      data = new ArrayList<>();
+    }
+    public MultipartBuilder add(String name, Object value) {
+      data.add(new Object[] { name, value });
+      return this;
+    }
+    public MultipartBuilder add(String name, Object value, String fname, String ftype) {
+      data.add(new Object[] { name, value, fname, ftype });
+      return this;
+    }
+    public BodyPublisher build() throws Exception {
+      /** Result request body */
+      List<byte[]> raw = new ArrayList<>();
+      String fname, ftype;
+      /** Separator with boundary */
+      byte[] separator = cat("--", boundary, "\r\nContent-Disposition: form-data; name=").getBytes(UTF8);
+      /** Iterating over data parts */
+      for (Object[] entry : data) {
+        if (entry == null || entry.length < 2) { continue; }
+        /** Opening boundary */
+        raw.add(separator);
+        /**
+         * If value is type of Path (file) append content type with file name and file
+         * binaries, otherwise simply append key=value
+         **/
+        if (entry[1] instanceof Path) {
+          Path path = (Path) entry[1];
+          fname = path.getFileName().toString();
+          ftype = Files.probeContentType(path);
+          raw.add(cat("\"", entry[0], "\"; filename=\"", fname,
+            "\"\r\nContent-Type: ", ftype, "\r\n\r\n").getBytes(UTF8));
+          raw.add(Files.readAllBytes(path));
+          raw.add("\r\n".getBytes(UTF8));
+        } else if (entry[1] instanceof InputStream) {
+          fname = "file.bin";
+          ftype = CTYPE_FILE;
+          if (entry.length > 2) { fname = String.valueOf(entry[2]); }
+          if (entry.length > 3) { ftype = String.valueOf(entry[3]); }
+          ByteArrayOutputStream ostream = new ByteArrayOutputStream();
+          try {
+            passthrough((InputStream) entry[1], ostream);
+            raw.add(ostream.toByteArray());
+          } finally { safeclose(ostream); }
+          raw.add(cat("\"", entry[0], "\"; filename=\"", fname,
+            "\"\r\nContent-Type: ", ftype, "\r\n\r\n").getBytes(UTF8));
+          raw.add("\r\n".getBytes(UTF8));
+        } else if (entry[1] instanceof byte[]) {
+          fname = "file.bin";
+          ftype = CTYPE_FILE;
+          if (entry.length > 2) { fname = String.valueOf(entry[2]); }
+          if (entry.length > 3) { ftype = String.valueOf(entry[3]); }
+          raw.add(cat("\"", entry[0], "\"; filename=\"", fname,
+            "\"\r\nContent-Type: ", ftype, "\r\n\r\n").getBytes(UTF8));
+          raw.add((byte[]) entry[1]);
+          raw.add("\r\n".getBytes(UTF8));
+        } else {
+          raw.add(cat("\"", entry[0], "\"\r\n\r\n", entry[1], "\r\n")
+            .getBytes(UTF8));
+        }
+      }
+      /** Closing boundary */
+      raw.add(cat("--", boundary, "--").getBytes(UTF8));
+
+      // for (byte[] buf : raw) { System.out.print(new String(buf, UTF8)); }
+      /** Serializing as byte array */
+      return BodyPublishers.ofByteArrays(raw);
+    }
   }
 
-  public static BodyPublisher multipart(Map<Object, Object> data, String boundary) throws IOException {
-    /** Result request body */
-    List<byte[]> byteArrays = new ArrayList<>();
-    /** Separator with boundary */
-    byte[] separator = ("--" + boundary + "\r\nContent-Disposition: form-data; name=").getBytes(UTF8);
-    /** Iterating over data parts */
-    for (Map.Entry<Object, Object> entry : data.entrySet()) {
-      /** Opening boundary */
-      byteArrays.add(separator);
-      /**
-       * If value is type of Path (file) append content type with file name and file
-       * binaries, otherwise simply append key=value
-       **/
-      if (entry.getValue() instanceof Path) {
-        var path = (Path) entry.getValue();
-        String mimeType = Files.probeContentType(path);
-        byteArrays.add(("\"" + entry.getKey() + "\"; filename=\"" + path.getFileName()
-          + "\"\r\nContent-Type: " + mimeType + "\r\n\r\n").getBytes(UTF8));
-        byteArrays.add(Files.readAllBytes(path));
-        byteArrays.add("\r\n".getBytes(UTF8));
-      } else {
-        byteArrays.add(("\"" + entry.getKey() + "\"\r\n\r\n" + entry.getValue() + "\r\n")
-          .getBytes(UTF8));
-      }
-    }
-    /** Closing boundary */
-    byteArrays.add(("--" + boundary + "--").getBytes(UTF8));
-    /** Serializing as byte array */
-    return BodyPublishers.ofByteArrays(byteArrays);
+  public static MultipartBuilder multipart(String boundary) {
+    return new MultipartBuilder(boundary);
   }
+  /** Multipart 를 사용하기 위한 테스트코드 */
+  // @Test public void testPublish() throws Exception {
+  //   String boundary = "WebKitFormBoundaryQGvWeNAiOE4g2VM5";
+  //   String str = HttpUtil.httpContentStr(
+  //     HttpUtil.httpExecute(
+  //       HttpUtil.httpclient(null, true, 1, null, null)
+  //       .build(),
+  //       // HttpUtil.request("https://nexus.ntiple.com/#browse/browse:maven-test", null)
+  //       HttpUtil.request("http://localhost:8080/api/tst01001001", new String[][] {
+  //           { CONTENT_TYPE, cat(CTYPE_MULTIPART, "; boundary=", boundary) },
+  //         })
+  //         .POST(HttpUtil.multipart(boundary)
+  //           .add("test", "1234")
+  //           .add("file", new byte[] { 1, 2, 3, 4 })
+  //         .build())
+  //       .build())
+  //   );
+  //   System.out.println(cat("CHECK:", str));
+  //   assertTrue(true);
+  // }
+
 
   // public static UrlEncodedFormEntity nameValueEntity(Map<String, Object> map, String enc) throws Exception {
   //   UrlEncodedFormEntity entity = null;

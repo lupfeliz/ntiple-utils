@@ -14,13 +14,4 @@ public class UtilsTestcase {
   @Test public void testSimple() throws Exception {
     assertTrue(true);
   }
-
-  // @Test public void testPublish() throws Exception {
-  //   HttpClient client = HttpUtil.httpclient(null, true, 1, null, null)
-  //     .build();
-  //   HttpRequest request = HttpUtil.request("https://nexus.ntiple.com/#browse/browse:maven-test", null)
-  //     .POST(BodyPublishers.ofString(null, null))
-  //     .build();
-  //   assertTrue(true);
-  // }
 }
