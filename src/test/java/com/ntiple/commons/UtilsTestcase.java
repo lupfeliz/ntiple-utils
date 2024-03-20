@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 public class UtilsTestcase {
-  @Test public void testSimple() {
+  @Test public void testSimple() throws Exception {
     assertTrue(true);
   }
 }

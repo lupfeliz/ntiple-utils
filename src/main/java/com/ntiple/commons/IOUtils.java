@@ -143,6 +143,10 @@ public class IOUtils {
     return BufferedReaderWrapper.createReader(file, charset);
   }
 
+  public static BufferedReader reader(Reader reader) {
+    return BufferedReaderWrapper.createReader(reader);
+  }
+
   public static BufferedReader reader(InputStream istream, String charset) {
     return BufferedReaderWrapper.createReader(istream, charset);
   }
@@ -159,17 +163,31 @@ public class IOUtils {
     return BufferedWriterWrapper.createWriter(ostream, charset);
   }
 
-  public static String readAsString(File file, String charset) {
+  public static String readAsString(File input) throws IOException { return doReadAsString(input, UTF8); }
+  public static String readAsString(File input, String charset) throws IOException { return doReadAsString(input, charset); }
+  public static String readAsString(InputStream input) throws IOException { return doReadAsString(input, UTF8); }
+  public static String readAsString(InputStream input, String charset) throws IOException { return doReadAsString(input, charset); }
+  public static String readAsString(Reader input) throws IOException { return doReadAsString(input, null); }
+
+  private static String doReadAsString(Object input, String charset) throws IOException {
     StringBuilder ret = new StringBuilder();
     BufferedReader reader = null;
+    if (input == null) { return null; }
     try {
-      reader = reader(file, charset);
-      for (String rl; (rl = reader.readLine()) != null;) { ret.append(rl); }
-    } catch (Exception ignore) {
+      if (input instanceof File) {
+        reader = reader((File) input, charset);
+      } else if (input instanceof InputStream) {
+        reader = reader((InputStream) input, charset);
+      } else if (input instanceof Reader) {
+        reader = reader((Reader) input);
+      }
+      for (String rl; (rl = reader.readLine()) != null;) {
+        ret.append(rl).append("\n");
+      }
     } finally {
       safeclose(reader);
     }
-    return String.valueOf(ret);
+    return ret.substring(0, ret.length() - 1);
   }
 
   public static void writeToFile(String str, File file, String charset) {
@@ -226,6 +244,17 @@ public class IOUtils {
         safeclose(istream);
         safeclose(reader);
         safeclose(inst);
+      }
+      return inst;
+    }
+    public static BufferedReaderWrapper createReader(Reader reader) {
+      BufferedReaderWrapper inst = null;
+      try {
+        inst = new BufferedReaderWrapper(reader);
+        inst.reader = new BufferedReader(reader);
+        inst.closeables.add(reader);
+      } catch (Exception e) {
+        safeclose(reader);
       }
       return inst;
     }
