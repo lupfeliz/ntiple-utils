@@ -11,11 +11,9 @@ plugins {
 }
 
 group = 'com.ntiple'
-version = '0.0.2-5'
+version = '0.0.2-6'
 
 java {
-  // sourceCompatibility = '8'
-  // targetCompatibility = '8'
   sourceCompatibility = '11'
   targetCompatibility = '11'
 }
@@ -41,7 +39,7 @@ task copyJars(type: Copy) {
   from (configurations.runtimeClasspath) { include "*.jar" }
   from(jar.archivePath) { include "*.jar" }
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-  into "${buildDir}/libs"
+  into "${buildDir}/jars"
 }
 
 tasks.named('test') {
