@@ -31,4 +31,11 @@ public interface Constants {
   static final String TLS = "TLS";
   static final String UTF8 = "UTF-8";
   static final String X_FORWARDED_FOR = "X-Forwarded-For";
+
+  static final String AES_CBC_PKCS5Padding = "AES/CBC/PKCS5Padding";
+  static final String PBKDF2WithHmacSHA1 = "PBKDF2WithHmacSHA1";
+  static final String PBKDF2WithHmacSHA256 = "PBKDF2WithHmacSHA256";
+  static final String AES = "AES";
+  static final String RSA = "RSA";
+  static final String SHA1 = "SHA-1";
 }
