@@ -16,10 +16,14 @@ import java.io.InputStream;
 import java.io.Writer;
 import java.util.function.BiFunction;
 
+import com.ntiple.commons.ConvertUtil.TmpLogger;
+
 // import lombok.extern.slf4j.Slf4j;
 
 // @Slf4j
 public class ProcUtil {
+
+  private static final TmpLogger log = TmpLogger.getLogger();
   
   public static String execRawCmd(Runtime rtm, String[] cmd, byte[] buf) throws Exception { return execRawCmd(rtm, cmd, buf, true, -1, null); }
   public static String execRawCmd(Runtime rtm, String[] cmd, byte[] buf, boolean errstop, long wait, BiFunction<StringBuilder, StringBuilder, Boolean> fnfailed) throws Exception {
@@ -44,7 +48,7 @@ public class ProcUtil {
             try {
               sleep(1000);
               WR.append("\r\n").flush();
-            } catch (Exception ignore) { }
+            } catch (Exception ignore) { log.trace("E:{}", ignore); }
           }
         }.start();
 
@@ -66,13 +70,13 @@ public class ProcUtil {
         safeclose(writer);
         safeclose(istream);
         safeclose(estream);
-        if (prc != null) { try { prc.destroy(); } catch (Exception ignore) { } }
+        if (prc != null) { try { prc.destroy(); } catch (Exception ignore) { log.trace("E:{}", ignore); } }
       }
     }
     return ret;
   }
 
   public static void sleep(long ms) {
-    try { Thread.sleep(ms); } catch (Exception ignore) { }
+    try { Thread.sleep(ms); } catch (Exception ignore) { log.trace("E:{}", ignore); }
   }
 }

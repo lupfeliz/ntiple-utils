@@ -65,12 +65,11 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 
-/**
- * 미완성 클래스 (현시점 사용불가)
- */
-public class HttpUtil {
+import com.ntiple.commons.ConvertUtil.TmpLogger;
 
+public class HttpUtil {
   private static HttpUtil instance;
+  private static TmpLogger log = TmpLogger.getLogger();
 
   public static final String PTN_SCHEM_HTTP = "^http[s]{0,1}[:][/][/]";
   public static final Pattern PTN_PARAM = Pattern.compile("^([^=]+)[=](.*)$");
@@ -134,7 +133,7 @@ public class HttpUtil {
     } catch (Exception e) {
       // log.error("", e);
     } finally {
-      if (br != null) { try { br.close(); } catch (Exception ignore) { } }
+      if (br != null) { try { br.close(); } catch (Exception ignore) { log.trace("E:{}", ignore); } }
     }
     return output;
   }
@@ -166,7 +165,7 @@ public class HttpUtil {
 
   public static HttpClient.Builder httpclient(CookieHandler ckhnd, boolean ignoreSSL, int httpver, String proxyAddr, Integer proxyPort) throws Exception {
     HttpClient.Builder ret = null;
-    System.setProperty("jdk.httpclient.allowRestrictedHeaders", "connection,content-length,host");
+    System.setProperty("jdk.httpclient.allowRestrictedHeaders", "connection,content-length,host,upgrade");
 
     if (ckhnd == null) {
       CookieManager ckmng = new CookieManager();
@@ -232,29 +231,6 @@ public class HttpUtil {
     HttpResponse<InputStream> ret = client.send(request, BodyHandlers.ofInputStream());
     return ret;
   }
-
-  // public static Header[] headers(HttpServletRequest request) throws Exception {
-  //   List<Header> ret = new LinkedList<>();
-  //   Enumeration<String> names = cast(request.getHeaderNames(), names = null);
-  //   while (names.hasMoreElements()) {
-  //     String name = names.nextElement();
-  //     String value = request.getHeader(name);
-  //     ret.add(new BasicHeader(name, value));
-  //   }
-  //   log.debug("HEADERS:{}", ret);
-  //   return ret.toArray(new Header[ret.size()]);
-  // }
-
-  // public static Header[] headers(String[][] arg) throws Exception {
-  //   List<Header> ret = new LinkedList<>();
-  //   for (String[] item : arg) {
-  //     if (item != null && item.length >= 2) {
-  //       ret.add(new BasicHeader(item[0], item[1]));
-  //     }
-  //   }
-  //   log.debug("HEADERS:{}", ret);
-  //   return ret.toArray(new Header[ret.size()]);
-  // }
 
   public static HttpResponse<InputStream> response(HttpClient client, HttpRequest req) throws Exception {
     HttpResponse<InputStream> ret = client.send(req, HttpResponse.BodyHandlers.ofInputStream());
@@ -350,7 +326,6 @@ public class HttpUtil {
       }
       /** Closing boundary */
       raw.add(cat("--", boundary, "--").getBytes(UTF8));
-
       // for (byte[] buf : raw) { System.out.print(new String(buf, UTF8)); }
       return request
         .header(Constants.CONTENT_TYPE,
@@ -364,23 +339,6 @@ public class HttpUtil {
   public static MultipartBuilder multipart(HttpRequest.Builder request) {
     return new MultipartBuilder(request);
   }
-
-  /** Multipart 를 사용하기 위한 테스트코드 */
-  // @Test public void testPublish() throws Exception {
-  //   String str = HttpUtil.httpContentStr(
-  //     HttpUtil.httpExecute(
-  //       HttpUtil.httpclient(null, true, 1, null, null)
-  //       .build(),
-  //       HttpUtil.multipart(
-  //         HttpUtil.request("http://localhost:8080/api/tst01001001", new String[][] { }))
-  //         .add("test", "1234")
-  //         .add("file", new byte[] { 'a', 'b', 'c', 'd' })
-  //       .build()
-  //     .build())
-  //   );
-  //   // System.out.println(cat("CHECK:", str));
-  //   assertTrue(true);
-  // }
 
   public static String urlParamString(String[][] arg, String enc) throws Exception {
     StringBuilder ret = new StringBuilder();
@@ -398,48 +356,6 @@ public class HttpUtil {
     }
   }
 
-  // public static void copyHeaders(HttpServletRequest requestf, HttpRequestBase requestt) throws Exception {
-  //   Enumeration<String> names = cast(requestf.getHeaderNames(), names = null);
-  //   while (names.hasMoreElements()) {
-  //     String name = names.nextElement();
-  //     String value = requestf.getHeader(name);
-  //     requestt.addHeader(name, value);
-  //   }
-  // }
-
-  // public static Map<String, Object> param(HttpServletRequest request) {
-  //   Map<String, Object> ret = new LinkedHashMap<String, Object>();
-  //   Enumeration<String> keys = cast(request.getAttributeNames(), keys = null);
-  //   while (keys.hasMoreElements()) {
-  //     String key = keys.nextElement();
-  //     Object val = request.getAttribute(key);
-  //     ret.put(key, val);
-  //   }
-  //   return ret;
-  // }
-
-  // public static Map<String, Object> param(HttpSession session) {
-  //   Map<String, Object> ret = new LinkedHashMap<String, Object>();
-  //   Enumeration<String> keys = cast(session.getAttributeNames(), keys = null);
-  //   while (keys.hasMoreElements()) {
-  //     String key = keys.nextElement();
-  //     Object val = session.getAttribute(key);
-  //     ret.put(key, val);
-  //   }
-  //   return ret;
-  // }
-
-  // public static Map<String, Object> param(ServletContext context) {
-  //   Map<String, Object> ret = new LinkedHashMap<String, Object>();
-  //   Enumeration<String> keys = cast(context.getAttributeNames(), keys = null);
-  //   while (keys.hasMoreElements()) {
-  //     String key = keys.nextElement();
-  //     Object val = context.getAttribute(key);
-  //     ret.put(key, val);
-  //   }
-  //   return ret;
-  // }
-
   public static Map<String, Object> param(String str, String enc) {
     Map<String, Object> ret = new LinkedHashMap<String, Object>();
     str = str.trim();
@@ -453,7 +369,7 @@ public class HttpUtil {
         String val = mat.group(2);
         try {
           val = URLDecoder.decode(val, enc);
-        } catch (Exception ignore) { }
+        } catch (Exception ignore) { log.trace("E:{}", ignore); }
         ret.put(key, val);
       }
     }

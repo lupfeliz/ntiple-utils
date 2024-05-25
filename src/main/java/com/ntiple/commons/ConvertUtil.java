@@ -37,6 +37,7 @@ import java.util.regex.Pattern;
 public class ConvertUtil {
 
   // private static final Logger log = LoggerFactory.getLogger(ConvertUtil.class);
+  private static final TmpLogger log = TmpLogger.getLogger();
 
   private static Class<?> CLS_ORGJSON = null;
   private static Class<?> CLS_ORSJSON = null;
@@ -76,15 +77,15 @@ public class ConvertUtil {
       CLS_ORGJARR = Class.forName("org.json.JSONArray");
       MTD_LEN_ORGJARR = CLS_ORGJARR.getMethod("length", EMPTY_CLS);
       MTD_OPT_ORGJARR = CLS_ORGJARR.getMethod("opt", UNARY_CLS_INT);
-    } catch (Throwable ignore) { }
+    } catch (Throwable ignore) { log.trace("E:{}", ignore); }
     try {
       CLS_ORSJSON = Class.forName("org.json.simple.JSONObject");
       MTD_PUT_ORSJSON = CLS_ORSJSON.getMethod("put", new Class<?>[] { Object.class, Object.class });
-    } catch (Throwable ignore) { }
+    } catch (Throwable ignore) { log.trace("E:{}", ignore); }
     try {
-      CLS_NSFJSON = Class.forName("net.sf.json.JSONObject"); 
+      CLS_NSFJSON = Class.forName("net.sf.json.JSONObject");
       MTD_PUT_NSFJSON = CLS_NSFJSON.getMethod("put", new Class<?>[] { Object.class, Object.class });
-    } catch (Throwable ignore) { }
+    } catch (Throwable ignore) { log.trace("E:{}", ignore); }
   }
 
   public static <T> T convert(Object input, Class<T> type) {
@@ -97,7 +98,7 @@ public class ConvertUtil {
       } else {
         ret = type.getDeclaredConstructor(EMPTY_CLS).newInstance(EMPTY_OBJ);
       }
-    } catch (Exception ignore) { }
+    } catch (Exception ignore) { log.trace("E:{}", ignore); }
     ret = convert(input, ret);
     return ret;
   }
@@ -122,17 +123,15 @@ public class ConvertUtil {
             NamedColumn named = null;
             // log.trace("FIELDNAME:{} / {}", fname, named);
             if (field == null) {
-              try { field = type.getDeclaredField(fname); } catch (Exception ignore) { }
+              try { field = type.getDeclaredField(fname); } catch (Exception ignore) { log.trace("E:{}", ignore); }
             }
             if (field == null) {
-              try { field = type.getDeclaredField(capitalize(fname)); } catch (Exception ignore) { }
+              try { field = type.getDeclaredField(capitalize(fname)); } catch (Exception ignore) { log.trace("E:{}", ignore); }
             }
             if (field != null) {
               if ((named = field.getAnnotation(NamedColumn.class)) != null) {
                 String[] names = named.value();
-                for (String n : names) {
-                  methods.put(n, m);
-                }
+                for (String n : names) { methods.put(n, m); }
               }
               fname = field.getName();
             }
@@ -207,25 +206,21 @@ public class ConvertUtil {
             (name.startsWith("get") && name.length() > 3
               && pcnt == 0 && rtype != null)) {
             String key = decapitalize(name.replaceAll("(^get)|(^is)", ""));
-            Object val = m.invoke(input, EMPTY_OBJ );
+            Object val = m.invoke(input, EMPTY_OBJ);
             if (val != null && !"class".equals(key)) {
               if (methods != null && methods.size() > 0) {
                 Method method = methods.get(key);
-                if (method != null) {
-                  method.invoke(ret, new Object[] { val });
-                }
+                if (method != null) { method.invoke(ret, new Object[] { val }); }
               } else if (Map.class.isAssignableFrom(type)) {
                 if (!Map.class.isAssignableFrom(itype)) {
                   Field field = null;
                   if (field == null) {
-                    try { field = itype.getDeclaredField(key); } catch (Exception ignore) { }
+                    try { field = itype.getDeclaredField(key); } catch (Exception ignore) { log.trace("E:{}", ignore); }
                   }
                   if (field == null) {
-                    try { field = itype.getDeclaredField(capitalize(key)); } catch (Exception ignore) { }
+                    try { field = itype.getDeclaredField(capitalize(key)); } catch (Exception ignore) { log.trace("E:{}", ignore); }
                   }
-                  if (field != null) {
-                    key = field.getName();
-                  }
+                  if (field != null) { key = field.getName(); }
                 }
                 if (isPrimeType(rtype)) {
                   putMap(ret, key, val);
@@ -257,7 +252,7 @@ public class ConvertUtil {
           }
         }
       }
-    } catch (Exception ignore) { }
+    } catch (Exception ignore) { log.trace("E:{}", ignore); }
     return ret;
   }
 
@@ -268,15 +263,17 @@ public class ConvertUtil {
   public static Method getGetterMethod(Class<?> type, String key) {
     Method ret = null;
     try {
-      if (key == null || type == null || "".equals(key)) { return ret; }
-      String mname = cat ("get", capitalize(camelCase(key)));
+      if (key == null || type == null || "".equals(key)) {
+        return ret;
+      }
+      String mname = cat("get", capitalize(camelCase(key)));
       for (Method m : type.getMethods()) {
         if (mname.equals(m.getName()) && m.getParameterCount() == 0) {
           ret = m;
           break;
         }
       }
-    } catch (Exception ignore) { }
+    } catch (Exception ignore) { log.trace("E:{}", ignore); }
     return ret;
   }
 
@@ -285,7 +282,7 @@ public class ConvertUtil {
     if (inst == null) { return ret; }
     if (key == null || "".equals(key)) { return ret; }
     Method getter = getGetterMethod(inst.getClass(), key);
-    try { ret = getter.invoke(inst); } catch (Exception ignore) { }
+    try { ret = getter.invoke(inst); } catch (Exception ignore) { log.trace("E:{}", ignore); }
     return ret;
   }
 
@@ -293,14 +290,14 @@ public class ConvertUtil {
     Method ret = null;
     try {
       if (key == null || type == null || "".equals(key)) { return ret; }
-      String mname = cat ("set", capitalize(camelCase(key)));
+      String mname = cat("set", capitalize(camelCase(key)));
       for (Method m : type.getMethods()) {
         if (mname.equals(m.getName()) && m.getParameterCount() == 1) {
           ret = m;
           break;
         }
       }
-    } catch (Exception ignore) { }
+    } catch (Exception ignore) { log.trace("E:{}", ignore); }
     return ret;
   }
 
@@ -308,7 +305,7 @@ public class ConvertUtil {
     if (inst == null) { return; }
     if (key == null || "".equals(key)) { return; }
     Method setter = getSetterMethod(inst.getClass(), key);
-    try { setter.invoke(inst, val); } catch (Exception ignore) { }
+    try { setter.invoke(inst, val); } catch (Exception ignore) { log.trace("E:{}", ignore); }
   }
 
   public static boolean isAssignable(Class<?> target, Class<?>... classes) {
@@ -352,7 +349,7 @@ public class ConvertUtil {
     T ret = null;
     try {
       ret = (T) from;
-    } catch (ClassCastException ignore) { }
+    } catch (ClassCastException ignore) { log.trace("E:{}", ignore); }
     return ret;
   }
 
@@ -360,7 +357,7 @@ public class ConvertUtil {
   public static <T> T cast(Object from, T to) {
     try {
       to = (T) from;
-    } catch (ClassCastException ignore) { }
+    } catch (ClassCastException ignore) { log.trace("E:{}", ignore); }
     return to;
   }
 
@@ -379,7 +376,7 @@ public class ConvertUtil {
         Method method = methods.get(key);
         if (method != null) {
           ptype = method.getParameterTypes()[0];
-          if ( (ptype == String.class && (item = parseStr(item)) != null)) {
+          if ((ptype == String.class && (item = parseStr(item)) != null)) {
             String fname = decapitalize(method.getName().substring(3));
             Field field = null;
             Class<?> clss = ret.getClass();
@@ -392,14 +389,14 @@ public class ConvertUtil {
               } else if (field.isAnnotationPresent(DateTimeColumn.class)) {
                 item = format(date(item));
               }
-            } catch (Exception ignore) { }
+            } catch (Exception ignore) { log.trace("E:{}", ignore); }
             try {
               method.invoke(ret, item);
             } catch (Exception e) {
               // log.debug("ERROR ON CONVERT:{} / {}", method, e.getMessage());
             }
           } else if (
-            ((ptype == int.class | ptype == Integer.class) 
+            ((ptype == int.class || ptype == Integer.class)
               && (item = parseInt(item, null)) != null) ||
             ((ptype == long.class || ptype == Long.class)
               && (item = parseLong(item, null)) != null) ||
@@ -412,10 +409,10 @@ public class ConvertUtil {
             ((ptype == double.class || ptype == Double.class)
               && (item = parseDouble(item, null)) != null) ||
             ((ptype == boolean.class || ptype == Boolean.class)
-              && (item = parseBoolean(item, null)) != null) ) {
+              && (item = parseBoolean(item, null)) != null)) {
             try {
               method.invoke(ret, item);
-            } catch (Exception ignore) { }
+            } catch (Exception ignore) { log.trace("E:{}", ignore); }
           } else if (List.class.isAssignableFrom(ptype)) {
             if (item instanceof List) {
               try {
@@ -437,29 +434,24 @@ public class ConvertUtil {
                     item = list2;
                   }
                 }
-              } catch (Exception ignore) { }
-              try {
-                method.invoke(ret, item);
-              } catch (Exception ignore) { }
+              } catch (Exception ignore) { log.trace("E:{}", ignore); }
+              try { method.invoke(ret, item); } catch (Exception ignore) { log.trace("E:{}", ignore); }
             } else if (item != null && CLS_ORSJSON.isAssignableFrom(item.getClass())) {
+              /** NO-OP */
             }
           } else if (Object.class.equals(ptype)) {
-            try {
-              method.invoke(ret, item);
-            } catch (Exception ignore) { }
+            try { method.invoke(ret, item); } catch (Exception ignore) { log.trace("E:{}", ignore); }
           } else {
             /* item is not basic type */
-            try {
-              method.invoke(ret, convert(item, ptype));
-            } catch (Exception ignore) { }
+            try { method.invoke(ret, convert(item, ptype)); } catch (Exception ignore) { log.trace("E:{}", ignore); }
           }
         }
       } else if (CLS_ORGJSON != null && CLS_ORGJSON.equals(type)) {
-        try { MTD_PUT_ORGJSON.invoke(ret, new Object[] { key, item }); } catch (Exception ignore) { }
+        try { MTD_PUT_ORGJSON.invoke(ret, new Object[] { key, item }); } catch (Exception ignore) { log.trace("E:{}", ignore); }
       } else if (CLS_ORSJSON != null && CLS_ORSJSON.equals(type)) {
-        try { MTD_PUT_ORSJSON.invoke(ret, new Object[] { key, item }); } catch (Exception ignore) { }
+        try { MTD_PUT_ORSJSON.invoke(ret, new Object[] { key, item }); } catch (Exception ignore) { log.trace("E:{}", ignore); }
       } else if (CLS_NSFJSON != null && CLS_NSFJSON.equals(type)) {
-        try { MTD_PUT_NSFJSON.invoke(ret, new Object[] { key, item }); } catch (Exception ignore) { }
+        try { MTD_PUT_NSFJSON.invoke(ret, new Object[] { key, item }); } catch (Exception ignore) { log.trace("E:{}", ignore); }
       }
     }
     return ret;
@@ -497,7 +489,7 @@ public class ConvertUtil {
   public static Integer parseInt(Object o, Integer def) {
     Integer ret = def;
     if (o == null) { return def; }
-    try { ret = Integer.parseInt(String.valueOf(o)); } catch (Exception ignore) { }
+    try { ret = Integer.parseInt(String.valueOf(o)); } catch (Exception ignore) { log.trace("E:{}", ignore); }
     if (ret == null) { ret = def; }
     return ret;
   }
@@ -505,7 +497,7 @@ public class ConvertUtil {
   public static Long parseLong(Object o, Long def) {
     Long ret = def;
     if (o == null) { return def; }
-    try { ret = Long.parseLong(String.valueOf(o)); } catch (Exception ignore) { }
+    try { ret = Long.parseLong(String.valueOf(o)); } catch (Exception ignore) { log.trace("E:{}", ignore); }
     if (ret == null) { ret = def; }
     return ret;
   }
@@ -513,7 +505,7 @@ public class ConvertUtil {
   public static Float parseFloat(Object o, Float def) {
     Float ret = def;
     if (o == null) { return def; }
-    try { ret = Float.parseFloat(String.valueOf(o)); } catch (Exception ignore) { }
+    try { ret = Float.parseFloat(String.valueOf(o)); } catch (Exception ignore) { log.trace("E:{}", ignore); }
     if (ret == null) { ret = def; }
     return ret;
   }
@@ -521,7 +513,7 @@ public class ConvertUtil {
   public static Double parseDouble(Object o, Double def) {
     Double ret = def;
     if (o == null) { return def; }
-    try { ret = Double.parseDouble(String.valueOf(o)); } catch (Exception ignore) { }
+    try { ret = Double.parseDouble(String.valueOf(o)); } catch (Exception ignore) { log.trace("E:{}", ignore); }
     if (ret == null) { ret = def; }
     return ret;
   }
@@ -529,7 +521,7 @@ public class ConvertUtil {
   public static Short parseShort(Object o, Short def) {
     Short ret = def;
     if (o == null) { return def; }
-    try { ret = Short.parseShort(String.valueOf(o)); } catch (Exception ignore) { }
+    try { ret = Short.parseShort(String.valueOf(o)); } catch (Exception ignore) { log.trace("E:{}", ignore); }
     if (ret == null) { ret = def; }
     return ret;
   }
@@ -537,7 +529,7 @@ public class ConvertUtil {
   public static Byte parseByte(Object o, Byte def) {
     Byte ret = def;
     if (o == null) { return def; }
-    try { ret = Byte.parseByte(String.valueOf(o)); } catch (Exception ignore) { }
+    try { ret = Byte.parseByte(String.valueOf(o)); } catch (Exception ignore) { log.trace("E:{}", ignore); }
     if (ret == null) { ret = def; }
     return ret;
   }
@@ -545,7 +537,7 @@ public class ConvertUtil {
   public static Boolean parseBoolean(Object o, Boolean def) {
     Boolean ret = def;
     if (o == null) { return def; }
-    try { ret = Boolean.parseBoolean(String.valueOf(o)); } catch (Exception ignore) { }
+    try { ret = Boolean.parseBoolean(String.valueOf(o)); } catch (Exception ignore) { log.trace("E:{}", ignore); }
     if (ret == null) { ret = def; }
     return ret;
   }
@@ -633,7 +625,6 @@ public class ConvertUtil {
           hr = parseInt(mat.group(4), 0);
           mi = parseInt(mat.group(5), 0);
           sc = parseInt(mat.group(6), 0);
-
           pp = mat.groupCount() > 7 ? mat.group(7) : "";
           ms = parseInt(mat.groupCount() > 8 ? mat.group(8) : "0", 0);
           // log.trace("PARSED[{}]: {}-{}-{} {}:{}:{}.{} // {}", inx, yr, mt, dt, hr, mi, sc, ms, str);
@@ -645,18 +636,15 @@ public class ConvertUtil {
           hr = parseInt(mat.group(4), 0);
           mi = parseInt(mat.group(5), 0);
           sc = parseInt(mat.group(6), 0);
-
           // log.trace("PARSED[{}]: {}-{}-{} {}:{}:{} // {}", inx, yr, mt, dt, hr, mi, sc, str);
         } break SW;
         case 4: {
           yr = parseInt(mat.group(1), 1);
           mt = parseInt(mat.group(2), 1);
           dt = parseInt(mat.group(4), 1);
-
           hr = parseInt(mat.groupCount() > 6 ? mat.group(6) : "0", 0);
           mi = parseInt(mat.groupCount() > 8 ? mat.group(8) : "0", 0);
           sc = parseInt(mat.groupCount() > 10 ? mat.group(10) : "0", 0);
-
           // log.trace("PARSED[{}]: {}-{}-{} {}:{}:{} // {}", inx, yr, mt, dt, hr, mi, sc, str);
         } break SW;
         }
@@ -681,13 +669,6 @@ public class ConvertUtil {
       cld.setTimeInMillis(ct);
     }
     return cld;
-  }
-
-  public static String string(Object o) { return string(o, ""); }
-  public static String string(Object o, String def) {
-    String ret = def;
-    if (o != null) { ret = String.valueOf(o); }
-    return ret;
   }
 
   public static class DateTime {
@@ -767,7 +748,7 @@ public class ConvertUtil {
           ret = df.parse(str);
         }
       }
-    } catch (Exception ignore) { }
+    } catch (Exception ignore) { log.trace("E:{}", ignore); }
     return ret;
   }
 
@@ -1203,7 +1184,7 @@ public class ConvertUtil {
         if (!flg) { ret.add(a1); }
         continue LOOP1;
       }
-    } catch (Exception ignore) { }
+    } catch (Exception ignore) { log.trace("E:{}", ignore); }
     return ret;
   }
 
@@ -1312,5 +1293,17 @@ public class ConvertUtil {
       continue LOOP_FLD;
     }
     return ret;
+  }
+
+  public static class TmpLogger {
+    private static TmpLogger instance;
+    public static TmpLogger getLogger() {
+      if (instance == null) { instance = new TmpLogger(); }
+      return instance;
+    }
+    public void trace(String fmt, Object... args) { }
+    public void debug(String fmt, Object... args) { }
+    public void warn(String fmt, Object... args) { }
+    public void error(String fmt, Object... args) { }
   }
 }

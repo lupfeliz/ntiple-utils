@@ -31,6 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+import com.ntiple.commons.ConvertUtil.TmpLogger;
+
 // import org.json.JSONObject;
 
 // import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +40,9 @@ import java.util.stream.Stream;
 // import lombok.extern.slf4j.Slf4j;
 
 public class IOUtils {
+
+  private static final TmpLogger log = TmpLogger.getLogger();
+
   public static final int passthrough(InputStream istream, OutputStream ostream) throws IOException {
     int ret = 0;
     if (istream != null && ostream != null) {
@@ -79,7 +84,7 @@ public class IOUtils {
     boolean ret = false;
     try {
       ret = file.delete();
-    } catch (Exception ignore) { }
+    } catch (Exception ignore) { log.trace("E:{}", ignore); }
     return ret;
   }
 
@@ -218,7 +223,7 @@ public class IOUtils {
     if (o != null) {
       try {
         o.close();
-      } catch (Exception ignore) { }
+      } catch (Exception ignore) { log.trace("E:{}", ignore); }
     }
   }
 
@@ -226,7 +231,7 @@ public class IOUtils {
     if (o != null) {
       try {
         o.close();
-      } catch (Exception ignore) { }
+      } catch (Exception ignore) { log.trace("E:{}", ignore); }
     }
   }
 

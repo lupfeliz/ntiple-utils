@@ -124,7 +124,7 @@ public class ValuesUtil {
   //     props.setPruneTags("script");
   //     ret = new HtmlCleaner(props).clean(String.valueOf(ret)).getText().toString();
   //     ret = ret.replaceAll("[ \r\n\t]+", " ");
-  //   } catch (Exception ignore) { }
+  //   } catch (Exception ignore) { log.trace("E:{}", ignore); }
   //   return ret;
   // }
 }
