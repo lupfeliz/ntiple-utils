@@ -27,7 +27,7 @@ repositories {
   }
 }
 --- 중략 ---
-implementation 'com.ntiple:ntiple-utils:0.0.2-8'
+implementation 'com.ntiple:ntiple-utils:0.0.2-9'
 --- 중략 ---
 ```
 
@@ -48,7 +48,7 @@ implementation 'com.ntiple:ntiple-utils:0.0.2-8'
     <dependency>
       <groupId>com.ntiple</groupId>
       <artifactId>ntiple-utils</artifactId>
-      <version>0.0.2-8</version>
+      <version>0.0.2-9</version>
     </dependency>
     --- 중략 ---
   <dependencies>

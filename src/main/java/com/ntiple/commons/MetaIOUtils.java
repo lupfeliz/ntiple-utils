@@ -111,7 +111,7 @@ public class MetaIOUtils {
         }
       }
       for (Method mtd : CLS_WRITER.getMethods()) {
-        if ("read".equals(mtd.getName()) && mtd.getParameterCount() == 3) {
+        if ("write".equals(mtd.getName()) && mtd.getParameterCount() == 3) {
           MTD_WRITER_WRITE = mtd;
           break;
         }
@@ -290,7 +290,9 @@ public class MetaIOUtils {
   public static int read(Object o, Object buf, int pos, int len) throws Exception {
     int ret = 0;
     Class<?> cls = o.getClass();
-    if (CLS_INPUTSTREAM.isAssignableFrom(cls)) {
+    if (o instanceof ObjectReader) {
+      ret = cast(MTD_READER_READ.invoke(((ObjectReader) o).target, buf, pos, len), 0);
+    } else if (CLS_INPUTSTREAM.isAssignableFrom(cls)) {
       ret = cast(MTD_INPUTSTREAM_READ.invoke(o, buf, pos, len), 0);
     } else if (CLS_READER.isAssignableFrom(cls)) {
       ret = cast(MTD_READER_READ.invoke(o, buf, pos, len), 0);
@@ -300,7 +302,9 @@ public class MetaIOUtils {
 
   public static void write(Object o, Object buf, int pos, int len) throws Exception {
     Class<?> cls = o.getClass();
-    if (CLS_OUTPUTSTREAM.isAssignableFrom(cls)) {
+    if (o instanceof ObjectWriter)  {
+      MTD_WRITER_WRITE.invoke(((ObjectWriter) o).target, buf, pos, len);
+    } else if (CLS_OUTPUTSTREAM.isAssignableFrom(cls)) {
       MTD_OUTPUTSTREAM_WRITE.invoke(o, buf, pos, len);
     } else if (CLS_WRITER.isAssignableFrom(cls)) {
       MTD_WRITER_WRITE.invoke(o, buf, pos, len);
