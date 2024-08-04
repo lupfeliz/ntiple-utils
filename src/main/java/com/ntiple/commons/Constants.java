@@ -30,6 +30,7 @@ public interface Constants {
   static final String TIMEOUT = "timeout";
   static final String TLS = "TLS";
   static final String UTF8 = "UTF-8";
+  static final String ISO88591 = "ISO8859-1";
   static final String X_FORWARDED_FOR = "X-Forwarded-For";
 
   static final String AES_CBC_PKCS5Padding = "AES/CBC/PKCS5Padding";

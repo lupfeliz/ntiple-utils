@@ -123,7 +123,8 @@ public class CryptoUtil {
     }
 
     public static Cipher cipher(Key key, IvParameterSpec ivspec, int mode) throws Exception {
-      if (ivspec == null) { ivspec = new IvParameterSpec(new byte[key.getEncoded().length]); }
+      /** AES_CBC_PKCS5Padding 은 16byte 단위로 처리 */
+      if (ivspec == null) { ivspec = new IvParameterSpec(new byte[16]); }
       Cipher cipher = Cipher.getInstance(AES_CBC_PKCS5Padding);
       cipher.init(mode, key, ivspec);
       return cipher;
