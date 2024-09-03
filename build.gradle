@@ -8,10 +8,12 @@
 
 plugins {
   id 'java'
+  id 'maven-publish'
+  id 'signing'
 }
 
 group = 'com.ntiple'
-version = '0.0.2-10'
+version = '0.0.2-10-1'
 
 java {
   sourceCompatibility = JavaVersion.VERSION_11
@@ -34,12 +36,14 @@ dependencies {
   testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
 }
 
+
 task copyJars(type: Copy) {
   dependsOn(jar)
   from (configurations.runtimeClasspath) { include "*.jar" }
   from(jar.archivePath) { include "*.jar" }
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
   into "${buildDir}/jars"
+
 }
 
 tasks.named('test') {
@@ -47,3 +51,45 @@ tasks.named('test') {
 }
 
 build.dependsOn(copyJars)
+
+publishing {
+  publications {
+    mavenJava(MavenPublication) {
+      from components.java
+      pom {
+        name = 'ntiple-utils'
+        description = 'ntiple-utils'
+        url = 'https://www.ntiple.com'
+        licenses {
+          license {
+            name = 'The Apache License, Version 2.0'
+            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+          }
+        }
+        developers {
+          developer {
+            id = 'lupfeliz'
+            name = 'Jaebaek Jeong'
+            email = 'lupfeliz@gmail.com'
+          }
+        }
+        scm {
+          connection = 'scm:git:https://gitlab.ntiple.com/developers/ntiple-utils.git'
+          developerConnection = 'scm:git:https://gitlab.ntiple.com/developers/ntiple-utils.git'
+          url = 'https://www.ntiple.com'
+        }
+      }
+    }
+  }
+  repositories {
+    maven {
+      // def releasesRepoUrl = layout.buildDirectory.dir('repos/releases')
+      // def snapshotsRepoUrl = layout.buildDirectory.dir('repos/snapshots')
+      // url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+      url = "${buildDir}/repo"
+    }
+  }
+}
+// signing {
+//   sign publishing.publications.mavenJava
+// }
