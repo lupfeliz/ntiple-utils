@@ -35,5 +35,5 @@ out/
 
 ### VS Code ###
 .vscode/
-private.gpg
-public.gpg
+private.pgp
+public.pgp
