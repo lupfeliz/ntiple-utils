@@ -9,7 +9,7 @@
 plugins {
   id 'java'
   id 'maven-publish'
-  id 'signing'
+  id 'org.jreleaser' version '1.14.0'
 }
 
 group = 'com.ntiple'
@@ -38,6 +38,37 @@ dependencies {
   testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
 }
 
+jreleaser {
+  signing {
+    active = 'ALWAYS'
+    armored = true
+    mode = 'FILE'
+    publicKey = 'public.pgp'
+    secretKey = 'private.pgp'
+  }
+  deploy {
+    maven {
+      // nexus2 {
+      //   'maven-central' {
+      //     active = 'ALWAYS'
+      //     url = 'https://s01.oss.sonatype.org/service/local'
+      //     snapshotUrl = 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
+      //     closeRepository = true
+      //     releaseRepository = true
+      //     stagingRepository('build/staging-deploy')
+      //   }
+      // }
+      /* Portal Publisher API */
+      mavenCentral {
+        sonatype {
+          active = 'ALWAYS'
+          url = 'https://central.sonatype.com/api/v1/publisher'
+          stagingRepository('target/staging-deploy')
+        }
+      }
+    }
+  }
+}
 
 task copyJars(type: Copy) {
   dependsOn(jar)
@@ -57,11 +88,14 @@ build.dependsOn(copyJars)
 publishing {
   publications {
     mavenJava(MavenPublication) {
+      groupId = 'com.ntiple'
+      artifactId = 'ntiple-utils'
       from components.java
       pom {
         name = 'ntiple-utils'
         description = 'ntiple-utils'
         url = 'https://www.ntiple.com'
+        inceptionYear = '2021'
         licenses {
           license {
             name = 'The Apache License, Version 2.0'
@@ -88,7 +122,8 @@ publishing {
       // def releasesRepoUrl = layout.buildDirectory.dir('repos/releases')
       // def snapshotsRepoUrl = layout.buildDirectory.dir('repos/snapshots')
       // url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-      url = "${buildDir}/repo"
+      url = layout.buildDirectory.dir('staging-deploy')
+      // url = "${buildDir}/repo"
     }
   }
 }
@@ -99,4 +134,5 @@ javadoc {
 }
 // signing {
 //   sign publishing.publications.mavenJava
+//   sign configurations.archives
 // }
