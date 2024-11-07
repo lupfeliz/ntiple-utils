@@ -1,9 +1,9 @@
 /**
  * @File        : Hangul.java
- * @Version     : $Rev$
  * @Author      : 정재백
- * @History     : 2023-11-26 최초 작성
+ * @Since       : 2023-11-26
  * @Description : 한글유틸
+ * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;
 

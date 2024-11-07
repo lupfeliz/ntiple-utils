@@ -1,9 +1,9 @@
 /**
  * @File        : IOUtils.java
- * @Version     : $Rev$
  * @Author      : 정재백
- * @History     : 2023-11-19 최초 작성
+ * @Since       : 2023-11-19
  * @Description : 입출력 유틸
+ * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;
 

@@ -1,9 +1,9 @@
 /**
  * @File        : FormatUtil.java
- * @Version     : $Rev$
  * @Author      : 정재백
- * @History     : 2024-03-06 최초 작성
+ * @Since       : 2024-03-06
  * @Description : 포맷관련 유틸
+ * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;
 

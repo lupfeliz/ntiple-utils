@@ -1,9 +1,9 @@
 /**
  * @File        : FunctionUtil.java
- * @Version     : $Rev$
  * @Author      : 정재백
- * @History     : 2024-03-22 최초 작성
+ * @Since       : 2024-03-22
  * @Description : 함수 형태 정의
+ * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;
 

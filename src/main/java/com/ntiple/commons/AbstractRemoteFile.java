@@ -1,9 +1,9 @@
 /**
  * @File        : MetaIOUtils.java
- * @Version     : $Rev$
  * @Author      : 정재백
- * @History     : 2024-05-26 최초 작성
+ * @Since       : 2024-05-26
  * @Description : 입출력 유틸
+ * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;
 

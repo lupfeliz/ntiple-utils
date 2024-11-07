@@ -1,9 +1,9 @@
 /**
  * @File        : UtilsTestcase.java
- * @Version     : $Rev$
  * @Author      : 정재백
- * @History     : 2024-03-09 최초 작성
+ * @Since       : 2024-03-09
  * @Description : 테스트 케이스
+ * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;
 import static org.junit.jupiter.api.Assertions.*;

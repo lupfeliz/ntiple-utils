@@ -1,9 +1,9 @@
 /**
  * @File        : Constants.java
- * @Version     : $Rev$
  * @Author      : 정재백
- * @History     : 2024-03-07 최초 작성
+ * @Since       : 2024-03-07
  * @Description : 전역상수
+ * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;
 

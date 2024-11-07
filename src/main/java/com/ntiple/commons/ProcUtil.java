@@ -1,9 +1,9 @@
 /**
  * @File        : ProcUtil.java
- * @Version     : $Rev$
  * @Author      : 정재백
- * @History     : 2023-12-01 최초 작성
+ * @Since       : 2023-12-01
  * @Description : 프로세스유틸
+ * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;
 

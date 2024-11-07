@@ -1,9 +1,9 @@
 /**
  * @File        : ValuesUtil.java
- * @Version     : $Rev$
  * @Author      : 정재백
- * @History     : 2023-10-25 최초 작성
+ * @Since       : 2023-10-25
  * @Description : 각종 데이터 관련 유틸
+ * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;
 
