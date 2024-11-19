@@ -35,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -217,8 +218,7 @@ public class HttpUtil {
         reg = regRegister.invoke(reg, arr(S_HTTPS, sslcon));
         connectionManager = getconstr(PoolingHttpClientConnectionManager, arr(Registry)).newInstance(sslBuild.invoke(reg));
       }
-    // } catch (Throwable ignore) { log.trace("E:{}", ignore); }
-    } catch (Throwable e) { e.printStackTrace(); }
+    } catch (Throwable ignore) { log.trace("E:{}", ignore); }
   }
 
   public static <T> T httpClient(Class<T> cls) throws Exception { T ret = null; return cast(httpClient(), ret); }
@@ -432,5 +432,68 @@ public class HttpUtil {
       }
     }
     return ret;
+  }
+
+  public static HttpClientWorker worker(String url) {
+    HttpClientWorker worker = new HttpClientWorker(url);
+    return worker;
+  }
+
+  public static class HttpClientWorker {
+    private String protocol;
+    private String host;
+    private int port;
+    private String path;
+    private String query;
+    private String version;
+    private String method;
+    private Object body;
+
+    public HttpClientWorker(String ustr) {
+      URL url = null;
+      try {
+        url = new URL(ustr);
+        /** http, https */
+        this.protocol = url.getProtocol();
+        /** domain.com */
+        this.host = url.getHost();
+        /** -1, 80, 443 */
+        this.port = url.getPort();
+        /** /uri */
+        this.path = url.getPath();
+        /** name=value&name2=value2 */
+        this.query = url.getQuery();
+      } catch (MalformedURLException ignore) { }
+    }
+
+    public HttpClientWorker proxy(String proxy) {
+      return this;
+    }
+
+    public HttpClientWorker ipAddr(String ipAddr) {
+      return this;
+    }
+
+    public HttpClientWorker version(String version) {
+      this.version = version;
+      return this;
+    }
+
+    public HttpClientWorker method(String method) {
+      return this;
+    }
+
+    public HttpClientWorker body(Callable<?> exec) {
+      return this;
+    }
+
+    public HttpClientWorker body(Object body) {
+      return this;
+    }
+
+    public <T> T work(Class<T> cls) {
+      T ret = null;
+      return ret;
+    }
   }
 }
