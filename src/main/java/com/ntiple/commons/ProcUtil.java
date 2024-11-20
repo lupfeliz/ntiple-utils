@@ -16,14 +16,9 @@ import java.io.InputStream;
 import java.io.Writer;
 import java.util.function.BiFunction;
 
-import com.ntiple.commons.ConvertUtil.TmpLogger;
-
-// import lombok.extern.slf4j.Slf4j;
-
-// @Slf4j
 public class ProcUtil {
 
-  private static final TmpLogger log = TmpLogger.getLogger();
+  private static final SimpleLogger log = SimpleLogger.getLogger();
   
   public static String execRawCmd(Runtime rtm, String[] cmd, byte[] buf) throws Exception { return execRawCmd(rtm, cmd, buf, true, -1, null); }
   public static String execRawCmd(Runtime rtm, String[] cmd, byte[] buf, boolean errstop, long wait, BiFunction<StringBuilder, StringBuilder, Boolean> fnfailed) throws Exception {

@@ -7,6 +7,16 @@
  **/
 package com.ntiple.commons;
 
+import static com.ntiple.commons.ReflectionUtil.cast;
+import static com.ntiple.commons.ReflectionUtil.EMPTY_CLS;
+import static com.ntiple.commons.ReflectionUtil.EMPTY_OBJ;
+import static com.ntiple.commons.ReflectionUtil.UNARY_CLS_INT;
+import static com.ntiple.commons.ReflectionUtil.UNARY_CLS_STRING;
+import static com.ntiple.commons.StringUtil.camelCase;
+import static com.ntiple.commons.StringUtil.capitalize;
+import static com.ntiple.commons.StringUtil.cat;
+import static com.ntiple.commons.StringUtil.decapitalize;
+
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -31,24 +41,14 @@ import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// import org.slf4j.Logger;
-// import org.slf4j.LoggerFactory;
-
 public class ConvertUtil {
 
-  // private static final Logger log = LoggerFactory.getLogger(ConvertUtil.class);
-  private static final TmpLogger log = TmpLogger.getLogger();
+  private static final SimpleLogger log = SimpleLogger.getLogger();
 
   private static Class<?> CLS_ORGJSON = null;
   private static Class<?> CLS_ORSJSON = null;
   private static Class<?> CLS_NSFJSON = null;
   private static Class<?> CLS_ORGJARR = null;
-
-  public static Class<?>[] EMPTY_CLS = new Class<?>[] { };
-  public static Object[] EMPTY_OBJ = new Object[] { };
-
-  private static Class<?>[] UNARY_CLS_INT = new Class<?>[] { int.class };
-  private static Class<?>[] UNARY_CLS_STRING = new Class<?>[] { String.class };
 
   private static Method MTD_KEYS_ORGJSON = null;
   private static Method MTD_OPT_ORGJSON = null;
@@ -344,23 +344,6 @@ public class ConvertUtil {
     }
   }
 
-  @SuppressWarnings("unchecked")
-  public static <T> T cast(Object from, Class<T> clsTo) {
-    T ret = null;
-    try {
-      ret = (T) from;
-    } catch (ClassCastException ignore) { log.trace("E:{}", ignore); }
-    return ret;
-  }
-
-  @SuppressWarnings("unchecked")
-  public static <T> T cast(Object from, T to) {
-    try {
-      to = (T) from;
-    } catch (ClassCastException ignore) { log.trace("E:{}", ignore); }
-    return to;
-  }
-
   public static Map<String, Object> castmap(Object from) {
     return cast(from, new LinkedHashMap<>());
   }
@@ -456,22 +439,6 @@ public class ConvertUtil {
     }
     return ret;
   }
-  public static String decapitalize(String str) {
-    char c = str.charAt(0);
-    if (c >= 'A' && c <= 'Z') {
-      c = (char) ((int) c + 32);
-      str = c + str.substring(1);
-    }
-    return str;
-  }
-  public static String capitalize(String str) {
-    char c = str.charAt(0);
-    if (c >= 'a' && c <= 'z') {
-      c = (char) ((int) c - 32);
-      str = c + str.substring(1);
-    }
-    return str;
-  }
   public static String parseStr(Object o) {
     if (o != null) {
       return String.valueOf(o);
@@ -542,25 +509,6 @@ public class ConvertUtil {
     return ret;
   }
 
-  public static String trim(String str) {
-    String ret = str;
-    if (ret == null) { return ret; }
-    ret = ret.trim();
-    return ret;
-  }
-
-  public static String substring(String str, int st, Integer ed) {
-    String ret = str;
-    if (str == null) { return ret; }
-    if (str.length() < st) { return ret; }
-    if (ed != null && str.length() <= ed) { ed = str.length() - 1; }
-    if (ed != null) {
-      ret = str.substring(st, ed);
-    } else {
-      ret = str.substring(st);
-    }
-    return ret;
-  }
   public static Date parseDate(String str) { return parseCalendar(str).getTime(); }
   public static Calendar parseCalendar(String str) {
     Pattern[] PTN_DATE = {
@@ -885,79 +833,17 @@ public class ConvertUtil {
     return ret;
   }
 
-  public static String camelCase(String str) {
-    String ret = "";
-    String[] words = str.split("_");
-    for (String word : words) {
-      if (ret.length() == 0) {
-        ret = word.toLowerCase();
-      } else {
-        ret += capitalize(word.toLowerCase());
-      }
-    }
-    return ret;
-  }
-
-  public static String snakeCase(String str) {
-    String ret = "";
-    for (int inx = 0; inx < str.length(); inx++) {
-      char c = str.charAt(inx);
-      if (c >= 'a' && c <= 'z') {
-        ret += (char)(c - 32);
-      } else {
-        ret += "_" + (char)c;
-      }
-    }
-    return ret;
-  }
-
-  public static Map<String, Object> camelCase(Map<String, Object> map) {
+  public static Map<String, Object> decapitalizeMap(Map<String, Object> map) {
     if (map == null) { return null; }
     Map<String, Object> ret = new LinkedHashMap<>();
     for (String key : map.keySet()) {
       Object value = map.get(key);
       if (value instanceof Map) {
         Map<String, Object> item = cast(value, item = null);
-        value = camelCase(item);
+        value = decapitalizeMap(item);
       } else if (value instanceof List) {
         List<Object> item = cast(value, item = null);
-        value = camelCase(item);
-      }
-      if (value instanceof String) {
-        value = cast(value, "").trim();
-      }
-      ret.put(camelCase(key), value);
-    }
-    return ret;
-  }
-
-  public static List<Object> camelCase(List<Object> list) {
-    if (list == null) { return null; }
-    List<Object> ret = new LinkedList<>();
-    for (Object value : list) {
-      if (value instanceof Map) {
-        Map<String, Object> item = cast(value, item = null);
-        value = camelCase(item);
-      } else if (value instanceof List) {
-        List<Object> item = cast(value, item = null);
-        value = camelCase(item);
-      }
-      ret.add(value);
-    }
-    return ret;
-  }
-
-  public static Map<String, Object> decapitalize(Map<String, Object> map) {
-    if (map == null) { return null; }
-    Map<String, Object> ret = new LinkedHashMap<>();
-    for (String key : map.keySet()) {
-      Object value = map.get(key);
-      if (value instanceof Map) {
-        Map<String, Object> item = cast(value, item = null);
-        value = decapitalize(item);
-      } else if (value instanceof List) {
-        List<Object> item = cast(value, item = null);
-        value = decapitalize(item);
+        value = decapitalizeList(item);
       }
       if (value instanceof String) {
         value = cast(value, "").trim();
@@ -967,16 +853,52 @@ public class ConvertUtil {
     return ret;
   }
 
-  public static List<Object> decapitalize(List<Object> list) {
+  public static List<Object> decapitalizeList(List<Object> list) {
     if (list == null) { return null; }
     List<Object> ret = new LinkedList<>();
     for (Object value : list) {
       if (value instanceof Map) {
         Map<String, Object> item = cast(value, item = null);
-        value = decapitalize(item);
+        value = decapitalizeMap(item);
       } else if (value instanceof List) {
         List<Object> item = cast(value, item = null);
-        value = decapitalize(item);
+        value = decapitalizeList(item);
+      }
+      ret.add(value);
+    }
+    return ret;
+  }
+
+  public static Map<String, Object> camelCaseMap(Map<String, Object> map) {
+    if (map == null) { return null; }
+    Map<String, Object> ret = new LinkedHashMap<>();
+    for (String key : map.keySet()) {
+      Object value = map.get(key);
+      if (value instanceof Map) {
+        Map<String, Object> item = cast(value, item = null);
+        value = camelCaseMap(item);
+      } else if (value instanceof List) {
+        List<Object> item = cast(value, item = null);
+        value = camelCaseList(item);
+      }
+      if (value instanceof String) {
+        value = cast(value, "").trim();
+      }
+      ret.put(camelCase(key), value);
+    }
+    return ret;
+  }
+
+  public static List<Object> camelCaseList(List<Object> list) {
+    if (list == null) { return null; }
+    List<Object> ret = new LinkedList<>();
+    for (Object value : list) {
+      if (value instanceof Map) {
+        Map<String, Object> item = cast(value, item = null);
+        value = camelCaseMap(item);
+      } else if (value instanceof List) {
+        List<Object> item = cast(value, item = null);
+        value = camelCaseList(item);
       }
       ret.add(value);
     }
@@ -999,23 +921,6 @@ public class ConvertUtil {
     return ret;
   }
 
-  public static String[] varr(String... arg) {
-    String[] ret = arg;
-    return ret;
-  }
-
-  public static String cat(Object... arg) {
-    String ret = "";
-    for (Object a : arg) {
-      if (a instanceof String) {
-        ret = ret + a;
-      } else {
-        ret = ret + String.valueOf(a);
-      }
-    }
-    return ret;
-  }
-
   @Target({ ElementType.ANNOTATION_TYPE, ElementType.FIELD })
   @Retention(RetentionPolicy.RUNTIME)
   public static @interface DateTimeColumn { }
@@ -1033,15 +938,6 @@ public class ConvertUtil {
   public static @interface NamedColumn {
     String[] value() default{};
   }
-
-  // public static List<String> codeSplit(Object v, String delim) {
-  //   List<String> ret = null;
-  //   if (v != null) {
-  //     String[] split = String.valueOf(v).replaceAll("\\\s*", "").split(delim);
-  //     ret = Arrays.asList(split);
-  //   }
-  //   return ret;
-  // }
 
   public static Map<String, Object> newMap() { return new LinkedHashMap<>(); }
 
@@ -1077,10 +973,10 @@ public class ConvertUtil {
   }
 
   @SafeVarargs
-  public static <T> T[] arr(T... arr) { return arr; }
+  public static <T> T[] array(T... arr) { return arr; }
 
   @SafeVarargs
-  public static <T> T[] mergeArr(T[]... arr) {
+  public static <T> T[] mergeArray(T[]... arr) {
     T[] ret = null;
     int ginx = 0, len = 0;
     for (T[] itm : arr) { len += itm.length; }
@@ -1094,28 +990,12 @@ public class ConvertUtil {
     return ret;
   }
 
-  public static <T> T av(T[] arr, int inx) { return av(arr, inx, null); }
-  public static <T> T av(T[] arr, int inx, T def) {
+  public static <T> T arrayValue(T[] arr, int inx) { return arrayValue(arr, inx, null); }
+  public static <T> T arrayValue(T[] arr, int inx, T def) {
     T ret = def;
     if (arr == null || inx < 0 || arr.length == 0 || arr.length <= inx) { return ret; }
     ret = arr[inx];
     return ret;
-  }
-
-  public static String join(Object obj, String delim) {
-    StringBuilder ret = new StringBuilder();
-    if (obj instanceof List) {
-      for (Object item : (List<?>)obj) {
-        if (ret.length() > 0) { ret.append(delim); }
-        ret.append(String.valueOf(item));
-      }
-    } else if (obj instanceof String[]) {
-      for (String item : (String[])obj) {
-        if (ret.length() > 0) { ret.append(delim); }
-        ret.append(String.valueOf(item));
-      }
-    }
-    return String.valueOf(ret);
   }
 
   public static List<String> attrAsList(List<?> lst, String colname) { return attrAsList(lst, colname, String.class); }
@@ -1188,12 +1068,6 @@ public class ConvertUtil {
     return ret;
   }
 
-  // public static String tojsonstr(Object o) {
-  //   String ret = "";
-  //   ret = String.valueOf(new JSONObject(o));
-  //   return ret;
-  // }
-
   public static boolean isNumPtn(String str) {
     boolean ret = false;
     if (str == null) { return ret; }
@@ -1202,29 +1076,6 @@ public class ConvertUtil {
     }
     return ret;
   }
-
-  public static String repeatStr(String s, int len) {
-    String ret = "";
-    for (int inx = 0; inx < len; inx++) { ret += s; }
-    return ret;
-  }
-
-  public static String strreplace(String src, String find, String replace) {
-    String ret = src;
-    if (src == null) { return ret; }
-    if (find == null) { return ret; }
-    if (replace == null) { return ret; }
-    int st;
-    while(true) {
-      if ((st = src.indexOf(find)) == -1) {
-        ret = src;
-        break;
-      }
-      src = src.substring(0, st) + replace + src.substring(st + find.length());
-    }
-    return ret;
-  }
-
   private static final Pattern PTN_SPRING_PLACEHOLDER = Pattern.compile("\"\\$\\{(?<name>[a-zA-Z0-9_.]+)(:(?<defv>.*)){0,1}\\}\"");
   private static final String CLS_NAME_SPRING_ANNOTATION_VALUE = "org.springframework.beans.factory.annotation.Value";
 
@@ -1293,32 +1144,5 @@ public class ConvertUtil {
       continue LOOP_FLD;
     }
     return ret;
-  }
-
-  public static class TmpLogger {
-    private static TmpLogger inst;
-    private int level = 2;
-    public static TmpLogger getLogger() {
-      if (inst == null) { inst = new TmpLogger(); }
-      return inst;
-    }
-    public void setLevel(int level) { this.level = level; }
-    public void trace(String fmt, Object... args) { _print(0, fmt, args); }
-    public void debug(String fmt, Object... args) { _print(1, fmt, args); }
-    public void info(String fmt, Object... args) { _print(2, fmt, args); }
-    public void warn(String fmt, Object... args) { _print(3, fmt, args); }
-    public void error(String fmt, Object... args) { _print(4, fmt, args); }
-    private void _print(int level, String fmt, Object... args) {
-      if (level >= this.level) {
-        Pattern ptn = Pattern.compile("[{][}]");
-        Matcher mat = ptn.matcher(fmt);
-        System.out.println(String.format(mat.replaceAll("%s"), args));
-        if (args != null) {
-          for (int inx = 0; inx < args.length; inx++) {
-            if (args[inx] instanceof Throwable) { cast(args[inx], Throwable.class).printStackTrace(); }
-          }
-        }
-      }
-    }
   }
 }

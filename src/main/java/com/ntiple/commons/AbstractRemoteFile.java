@@ -7,7 +7,7 @@
  **/
 package com.ntiple.commons;
 
-import static com.ntiple.commons.ConvertUtil.cast;
+import static com.ntiple.commons.ReflectionUtil.cast;
 
 import java.io.File;
 import java.io.FilenameFilter;

@@ -8,8 +8,8 @@
 package com.ntiple.commons;
 
 import static com.ntiple.commons.Constants.UTF8;
-import static com.ntiple.commons.ConvertUtil.cast;
-import static com.ntiple.commons.ConvertUtil.cat;
+import static com.ntiple.commons.ReflectionUtil.cast;
+import static com.ntiple.commons.StringUtil.cat;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -31,17 +31,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import com.ntiple.commons.ConvertUtil.TmpLogger;
-
-// import org.json.JSONObject;
-
-// import com.fasterxml.jackson.databind.ObjectMapper;
-
-// import lombok.extern.slf4j.Slf4j;
-
 public class IOUtils {
 
-  private static final TmpLogger log = TmpLogger.getLogger();
+  private static final SimpleLogger log = SimpleLogger.getLogger();
 
   public static final int passthrough(InputStream istream, OutputStream ostream) throws IOException {
     int ret = 0;

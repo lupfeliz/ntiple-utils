@@ -7,9 +7,6 @@
  **/
 package com.ntiple.commons;
 
-// import lombok.extern.slf4j.Slf4j;
-
-// @Slf4j
 public class Hangul {
 
   public static final int BASE_CODE = 0xAC00;
