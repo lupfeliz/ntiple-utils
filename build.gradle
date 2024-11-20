@@ -75,14 +75,17 @@ jreleaser {
 
 task copyJars(type: Copy) {
   dependsOn(jar)
-  from (configurations.runtimeClasspath) { include "*.jar" }
-  from(jar.archivePath) { include "*.jar" }
+  from (configurations.runtimeClasspath) { include '*.jar' }
+  from(jar.archivePath) { include '*.jar' }
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
   into "${buildDir}/jars"
-
 }
 
 tasks.named('test') {
+  String tstlvl = System.properties['project.build.test']
+  if (tstlvl == null || ''.equals(tstlvl)) { tstlvl = 'SIMPLE' }
+  systemProperty('project.build.test', tstlvl)
+  reports.html.required = false
   useJUnitPlatform()
 }
 

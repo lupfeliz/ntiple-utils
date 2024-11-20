@@ -8,13 +8,22 @@
 package com.ntiple.commons;
 
 import static com.ntiple.commons.Constants.UTF8;
-import static com.ntiple.commons.ConvertUtil.cast;
+import static com.ntiple.commons.HttpUtil.httpWorker;
+import static com.ntiple.commons.IOUtils.readAsString;
 import static com.ntiple.commons.IOUtils.reader;
+import static com.ntiple.commons.IOUtils.safeclose;
+import static com.ntiple.commons.ReflectionUtil.cast;
 import static org.junit.jupiter.api.Assertions.*;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.ntiple.commons.FunctionUtil.Fn2a;
 import com.ntiple.commons.HttpUtil.HttpClientWorker;
+import com.ntiple.commons.TestUtil.TestLevel;
 
 @SuppressWarnings("all")
 public class UtilsTestcase {
@@ -22,20 +31,20 @@ public class UtilsTestcase {
     assertTrue(true);
   }
 
-  // @Test public void testHttpClient() throws Exception {
-  //   // sh gradlew cleanTest test -i --no-watch-fs --tests "com.ntiple.commons.UtilsTestcase.testHttpClient"
-  //   java.io.InputStream istream = null;
-  //   HttpClientWorker worker = new HttpUtil.HttpClientWorker("https://gitlab.ntiple.com");
-  //   istream = cast(worker.work(null), istream);
-  //   java.io.BufferedReader reader = null;
-  //   System.out.println("GET RESULT...");
-  //   try {
-  //     reader = reader(istream, UTF8);
-  //     for (String rl; (rl = reader.readLine()) != null;) {
-  //       System.out.println(String.format("%s", rl));
-  //     }
-  //   } catch (Exception e) {
-  //     e.printStackTrace();
-  //   }
-  // }
+  @Test public void testHttpClient() throws Exception {
+    if (!TestUtil.isEnabled("testHttpClient", TestLevel.MANUAL)) { return; }
+    SimpleLogger log = SimpleLogger.getLogger();
+    // sh gradlew cleanTest test -Dproject.build.test=MANUAL -i --no-watch-fs --tests "com.ntiple.commons.UtilsTestcase.testHttpClient"
+    String content = cast(httpWorker("https://gitlab.ntiple.com")
+      .work((state, istream, headers) -> {
+        log.setLevel(1);
+        Object ret = null;
+        try {
+          ret = readAsString(istream, UTF8);
+        } catch (Exception e) { log.debug("E:{}", e); }
+        log.debug("HEADERS:{}", headers);
+        return ret;
+      }), content = null);
+    log.debug("CONTENT:{}", content);
+  }
 }

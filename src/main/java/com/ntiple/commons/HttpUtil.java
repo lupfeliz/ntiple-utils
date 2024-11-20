@@ -11,6 +11,7 @@ import static com.ntiple.commons.Constants.S_HTTP;
 import static com.ntiple.commons.Constants.S_HTTPS;
 import static com.ntiple.commons.Constants.UTF8;
 import static com.ntiple.commons.ConvertUtil.array;
+import static com.ntiple.commons.ConvertUtil.newMap;
 import static com.ntiple.commons.IOUtils.reader;
 import static com.ntiple.commons.IOUtils.safeclose;
 import static com.ntiple.commons.ReflectionUtil.cast;
@@ -58,6 +59,9 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
+
+import com.ntiple.commons.FunctionUtil.Fn2a;
+import com.ntiple.commons.FunctionUtil.Fn3a;
 
 public class HttpUtil {
   private static final SimpleLogger log = SimpleLogger.getLogger();
@@ -109,6 +113,7 @@ public class HttpUtil {
   private static Class<?> JHttpRedirect = null;
   private static Class<?> JHttpRequest = null;
   private static Class<?> JHttpResponse = null;
+  private static Class<?> JHttpHeaders = null;
   private static Class<?> JHttpVer;
   private static Method JHttpClientSend = null;
   private static Method JHttpResponseInputStream = null;
@@ -236,6 +241,7 @@ public class HttpUtil {
       JHttpVer = findClass("java.net.http.HttpClient$Version");
       JHttpRequest = findClass("java.net.http.HttpRequest");
       JHttpResponse = findClass("java.net.http.HttpResponse");
+      JHttpHeaders = findClass("java.net.http.HttpHeaders");
       JHttpClientSend = findMethod(JHttpClient, "send", array(JHttpRequest, JHttpBodyHandler));
       JHttpResponseInputStream = findMethod(JHttpBodyHandlers, "ofInputStream", EMPTY_CLS);
       System.setProperty("jdk.httpclient.allowRestrictedHeaders", "connection,content-length,host,upgrade");
@@ -557,12 +563,13 @@ public class HttpUtil {
     return ret;
   }
 
-  public static HttpClientWorker worker(String url) {
+  public static HttpClientWorker httpWorker(String url) {
     HttpClientWorker worker = new HttpClientWorker(url);
     return worker;
   }
 
   public static class HttpClientWorker {
+    private String provider;
     private String protocol;
     private String agent;
     private String host;
@@ -601,6 +608,11 @@ public class HttpUtil {
       this.context = context; 
     }
 
+    public HttpClientWorker provider(String provider) {
+      this.provider = provider;
+      return this;
+    }
+
     public HttpClientWorker proxy(String proxy) {
       return this;
     }
@@ -635,9 +647,11 @@ public class HttpUtil {
       return context;
     }
 
-    public <T> T work(Class<T> cls) {
-      log.setLevel(1);
-      T ret = null;
+    public Object work(Fn3a<Integer, InputStream, Map<String, List<String>>, Object> callable) {
+      Object ret = null;
+      InputStream istream = null;
+      Integer state = -1;
+      Map<String, List<String>> headerMap = null;
       try {
         StringBuilder sb = new StringBuilder();
         sb.append(this.protocol)
@@ -651,16 +665,29 @@ public class HttpUtil {
         Object client = jClient(this.context, "ALWAYS", null, null, -1);
         Object request = jRequest(this.context, String.valueOf(sb), null);
         Object handler = JHttpResponseInputStream.invoke(null, EMPTY_OBJ);
-        Method body = findMethod(JHttpResponse, "body", EMPTY_CLS);
+        Method getStatusCode = findMethod(JHttpResponse, "statusCode", EMPTY_CLS);
+        Method getBody = findMethod(JHttpResponse, "body", EMPTY_CLS);
+        Method getHeaders = findMethod(JHttpResponse, "headers", EMPTY_CLS);
+        Method getMap = findMethod(JHttpHeaders, "map", EMPTY_CLS);
         // log.debug("REQUEST:{}", request);
         // log.debug("HANDLER:{}", handler);
         // log.debug("SEND:{}", JHttpClientSend);
         Object result = JHttpClientSend.invoke(client, array(request, handler));
         // log.debug("RESULT:{}", result);
-        ret = cast(body.invoke(result, EMPTY_OBJ), ret);
+        state = cast(getStatusCode.invoke(result, EMPTY_OBJ), state);
+        istream = cast(getBody.invoke(result, EMPTY_OBJ), istream);
+        {
+          Object obj = getHeaders.invoke(result, EMPTY_OBJ);
+          if (obj != null) { obj = getMap.invoke(obj, EMPTY_OBJ); }
+          if (obj != null) { headerMap = cast(obj, headerMap); }
+        }
+        if (headerMap == null) { headerMap = cast(newMap(), headerMap = null); }
+        ret = cast(callable.apply(state, istream, headerMap), ret);
         // log.debug("BODY:{}", ret);
       } catch (Exception e) {
-        // log.debug("CHECK:{}", e);
+        log.debug("E:{}", e);
+      } finally {
+        safeclose(istream);
       }
       return ret;
     }

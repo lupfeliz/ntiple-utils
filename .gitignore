@@ -37,3 +37,4 @@ out/
 .vscode/
 private.pgp
 public.pgp
+test.log
