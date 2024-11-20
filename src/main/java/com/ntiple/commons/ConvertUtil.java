@@ -1296,14 +1296,24 @@ public class ConvertUtil {
   }
 
   public static class TmpLogger {
-    private static TmpLogger instance;
+    private static TmpLogger inst;
+    private int level = 2;
     public static TmpLogger getLogger() {
-      if (instance == null) { instance = new TmpLogger(); }
-      return instance;
+      if (inst == null) { inst = new TmpLogger(); }
+      return inst;
     }
-    public void trace(String fmt, Object... args) { }
-    public void debug(String fmt, Object... args) { }
-    public void warn(String fmt, Object... args) { }
-    public void error(String fmt, Object... args) { }
+    public void setLevel(int level) { this.level = level; }
+    public void trace(String fmt, Object... args) { _print(0, fmt, args); }
+    public void debug(String fmt, Object... args) { _print(1, fmt, args); }
+    public void info(String fmt, Object... args) { _print(2, fmt, args); }
+    public void warn(String fmt, Object... args) { _print(3, fmt, args); }
+    public void error(String fmt, Object... args) { _print(4, fmt, args); }
+    private void _print(int level, String fmt, Object... args) {
+      if (level >= this.level) {
+        Pattern ptn = Pattern.compile("[{][}]");
+        Matcher mat = ptn.matcher(fmt);
+        System.out.println(String.format(mat.replaceAll("%s"), args));
+      }
+    }
   }
 }

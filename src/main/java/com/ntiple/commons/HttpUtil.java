@@ -25,7 +25,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
@@ -135,17 +134,18 @@ public class HttpUtil {
   private static Method JHttpCookieHandler = null;
   private static Method JHttpSslContext = null;
   static {
+    // log.setLevel(1);
     if (HttpServletRequest == null) {
     /** for javax.servlet package (JDK 1.8 ver)  */
       try {
         HttpServletRequest = getclass("javax.servlet.http.HttpServletRequest");
-      } catch (Throwable ignore) { log.trace("E:{}", ignore); }
+      } catch (Throwable ignore) { log.debug("E:{}", ignore); }
     }
     /** for jakarta package (over JDK 1.8 ver)  */
     if (HttpServletRequest == null) {
       try {
         HttpServletRequest = getclass("jakarta.servlet.http.HttpServletRequest");
-      } catch (Throwable ignore) { log.trace("E:{}", ignore); }
+      } catch (Throwable ignore) { log.debug("E:{}", ignore); }
     }
     try {
       HttpHost = getclass("org.apache.http.HttpHost");
@@ -209,7 +209,7 @@ public class HttpUtil {
         Method sslLoadTrustMaterial = getmethod(SSLContextBuilder, "loadTrustMaterial", KeyStore.class, TrustStrategy);
         Method sslBuild = getmethod(SSLContextBuilder, "build", EMPTY_CLS);
         Object sslContextBuilder = newinstance(SSLContextBuilder);
-        Object trustStrategy = Proxy.newProxyInstance(TrustStrategy.getClassLoader(),
+        Object trustStrategy = java.lang.reflect.Proxy.newProxyInstance(TrustStrategy.getClassLoader(),
           new Class<?>[] { TrustStrategy }, new InvocationHandler() {
           @Override public Object invoke(Object p, Method m, Object[] a) throws Throwable {
             if ("isTrusted".equals(m.getName()) && a.length == 2) { return true; }
@@ -220,7 +220,7 @@ public class HttpUtil {
         sslContext = sslBuild.invoke(sslContextBuilder, EMPTY_OBJ);
       }
       {
-        connectionKeepAliveStrategy = Proxy.newProxyInstance(ConnectionKeepAliveStrategy.getClassLoader(),
+        connectionKeepAliveStrategy = java.lang.reflect.Proxy.newProxyInstance(ConnectionKeepAliveStrategy.getClassLoader(),
           new Class<?>[] { ConnectionKeepAliveStrategy }, new InvocationHandler() {
             @Override public Object invoke(Object p, Method m, Object[] a) throws Throwable {
               /** 5 seconds */
@@ -247,7 +247,7 @@ public class HttpUtil {
         reg = regRegister.invoke(reg, arr(S_HTTPS, sslcon));
         connectionManager = getconstr(PoolingHttpClientConnectionManager, arr(Registry)).newInstance(sslBuild.invoke(reg));
       }
-    } catch (Throwable ignore) { log.trace("E:{}", ignore); }
+    } catch (Throwable ignore) { log.debug("E:{}", ignore); }
     try {
       JHttpClient = getclass("java.net.http.HttpClient");
       JHttpClientBuilder = getclass("java.net.http.HttpClient$Builder");
@@ -256,8 +256,8 @@ public class HttpUtil {
       JHttpRequest = getclass("java.net.http.HttpRequest");
       JHttpResponse = getclass("java.net.http.HttpResponse");
       System.setProperty("jdk.httpclient.allowRestrictedHeaders", "connection,content-length,host,upgrade");
-    // } catch (Throwable ignore) { log.trace("E:{}", ignore); }
-    } catch (Throwable e) { e.printStackTrace(); }
+    } catch (Throwable ignore) { log.debug("E:{}", ignore); }
+    // } catch (Throwable e) { e.printStackTrace(); }
   }
 
   public static <T> T httpClient(Class<T> cls) throws Exception { T ret = null; return cast(httpClient(), ret); }
@@ -402,7 +402,7 @@ public class HttpUtil {
       if (entity != null) {
         ret = reader(cast(HttpEntityGetContent.invoke(entity, EMPTY_OBJ), InputStream.class), enc);
       }
-    } catch (Exception e) { log.trace("E:", e); }
+    } catch (Exception e) { log.debug("E:", e); }
     return ret;
   }
 
@@ -449,7 +449,7 @@ public class HttpUtil {
         Object val = RequestGetAttribute.invoke(request, key);
         ret.put(key, val);
       }
-    } catch (Exception e) { log.trace("E:", e); }
+    } catch (Exception e) { log.debug("E:", e); }
     return ret;
   }
 
@@ -466,7 +466,7 @@ public class HttpUtil {
         String val = mat.group(2);
         try {
           val = URLDecoder.decode(val, enc);
-        } catch (Exception ignore) { log.trace("E:{}", ignore); }
+        } catch (Exception ignore) { log.debug("E:{}", ignore); }
         ret.put(key, val);
       }
     }
@@ -477,6 +477,7 @@ public class HttpUtil {
     T ret = null;
     Object builder = null;
     Method newBuilder = null;
+    Method mBuild = null;
     Method mVersion = null;
     Method mProxy = null;
     Method mFollowRedirects = null;
@@ -486,6 +487,7 @@ public class HttpUtil {
       try {
         newBuilder = getmethod(JHttpClient, "newBuilder", EMPTY_CLS);
         builder = newBuilder.invoke(null, EMPTY_OBJ);
+        mBuild = getmethod(JHttpClientBuilder, "build", EMPTY_CLS);
         mVersion = getmethod(JHttpClientBuilder, "version", arr(JHttpVer));
         mProxy = getmethod(JHttpClientBuilder, "proxy", arr(ProxySelector.class));
         mFollowRedirects = getmethod(JHttpClientBuilder, "followRedirects", arr(JHttpRedirect));
@@ -495,10 +497,10 @@ public class HttpUtil {
           Object v = null;
           switch (ver) {
           case "2": {
-            v = getfieldv(JHttpVer, "HTTP_2", builder);
+            v = getfieldv(JHttpVer, "HTTP_2");
           } break;
           default: {
-            v = getfieldv(JHttpVer, "HTTP_1_1", builder);
+            v = getfieldv(JHttpVer, "HTTP_1_1");
           } }
           mVersion.invoke(builder, v);
         }
@@ -506,7 +508,7 @@ public class HttpUtil {
           mProxy.invoke(builder, new StaticProxySelector(new InetSocketAddress(paddr, pport)));
         }
         {
-          mFollowRedirects.invoke(builder, getfieldv(JHttpRedirect, "NORMAL", builder));
+          mFollowRedirects.invoke(builder, getfieldv(JHttpRedirect, "NORMAL"));
         }
         {
           CookieHandler ckhnd = null;
@@ -530,11 +532,11 @@ public class HttpUtil {
           sslContext.init(null, new TrustManager[] { trustManager }, new SecureRandom());
           mSslContext.invoke(builder, sslContext);
         }
+        ret = cast(mBuild.invoke(builder, EMPTY_OBJ), ret);
         // System.out.println("================================================================================");
-        // System.out.println(String.format("CHECK: %s", builder));
+        // System.out.println(String.format("CHECK: %s", ret));
         // System.out.println("================================================================================");
-      } catch (Exception ignore) { log.trace("E:{}", ignore); }
-      // } catch (Exception e) { e.printStackTrace(); }
+      } catch (Exception ignore) { log.debug("E:{}", ignore); }
     }
     return ret;
   }
@@ -577,11 +579,11 @@ public class HttpUtil {
           /** name=value&name2=value2 */
           this.query = url.getQuery();
         } catch (MalformedURLException ignore) { }
-        // try {
-        //   jClient(null, "2", null, -1);
-        // } catch (Exception e) {
-        //   e.printStackTrace();
-        // }
+        try {
+          jClient(null, "2", null, -1);
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
       }
       this.agent = "HttpClient";
       if (context == null) { context = new LinkedHashMap<>(); }
