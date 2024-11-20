@@ -127,6 +127,8 @@ public class HttpUtil {
   private static Class<?> JHttpRequest = null;
   private static Class<?> JHttpResponse = null;
   private static Class<?> JHttpVer;
+  private static Method JHttpClientSend = null;
+  private static Method JHttpResponseInputStream = null;
   static {
     // log.setLevel(1);
     if (HttpServletRequest == null) {
@@ -243,12 +245,16 @@ public class HttpUtil {
       }
     } catch (Throwable ignore) { log.debug("E:{}", ignore); }
     try {
+      Class<?> JHttpBodyHandler = getclass("java.net.http.HttpResponse$BodyHandler");
+      Class<?> JHttpBodyHandlers = getclass("java.net.http.HttpResponse$BodyHandlers");
       JHttpClient = getclass("java.net.http.HttpClient");
       JHttpClientBuilder = getclass("java.net.http.HttpClient$Builder");
       JHttpRedirect = getclass("java.net.http.HttpClient$Redirect");
       JHttpVer = getclass("java.net.http.HttpClient$Version");
       JHttpRequest = getclass("java.net.http.HttpRequest");
       JHttpResponse = getclass("java.net.http.HttpResponse");
+      JHttpClientSend = getmethod(JHttpClient, "send", arr(JHttpRequest, JHttpBodyHandler));
+      JHttpResponseInputStream = getmethod(JHttpBodyHandlers, "ofInputStream", EMPTY_CLS);
       System.setProperty("jdk.httpclient.allowRestrictedHeaders", "connection,content-length,host,upgrade");
     } catch (Throwable ignore) { log.debug("E:{}", ignore); }
   }
@@ -466,8 +472,8 @@ public class HttpUtil {
     return ret;
   }
 
-  private static <T> T jClient(Class<T> cls, String ver, String paddr, int pport) {
-    T ret = null;
+  private static Object jClient(String ver, String paddr, int pport) {
+    Object ret = null;
     Object builder = null;
     Method newBuilder = null;
     Method mBuild = null;
@@ -488,6 +494,7 @@ public class HttpUtil {
         mSslContext = getmethod(JHttpClientBuilder, "sslContext", arr(SSLContext.class));
         {
           Object v = null;
+          if (ver == null) { ver = "1.1"; }
           switch (ver) {
           case "2": {
             v = getfieldv(JHttpVer, "HTTP_2");
@@ -525,12 +532,28 @@ public class HttpUtil {
           sslContext.init(null, new TrustManager[] { trustManager }, new SecureRandom());
           mSslContext.invoke(builder, sslContext);
         }
-        ret = cast(mBuild.invoke(builder, EMPTY_OBJ), ret);
+        ret = mBuild.invoke(builder, EMPTY_OBJ);
         // System.out.println("================================================================================");
         // System.out.println(String.format("CHECK: %s", ret));
         // System.out.println("================================================================================");
       } catch (Exception ignore) { log.debug("E:{}", ignore); }
     }
+    return ret;
+  }
+
+  private static Object jRequest(String ustr, String[][] headers) {
+    Object ret = null;
+    try {
+      Object builder = null;
+      URI uri = URI.create(ustr);
+      Class<?> JHttpRequestBuilder = getclass("java.net.http.HttpRequest$Builder");
+      Method jHttpRequestBuilder = getmethod(JHttpRequest, "newBuilder", EMPTY_CLS);
+      Method jRequestUri = getmethod(JHttpRequestBuilder, "uri", arr(URI.class));
+      Method build = getmethod(JHttpRequestBuilder, "build", EMPTY_CLS);
+      builder = jHttpRequestBuilder.invoke(null, EMPTY_OBJ);
+      jRequestUri.invoke(builder, uri);
+      ret = build.invoke(builder, EMPTY_OBJ);
+    } catch (Exception ignore) { log.debug("E:{}", ignore); }
     return ret;
   }
 
@@ -613,12 +636,28 @@ public class HttpUtil {
     }
 
     public <T> T work(Class<T> cls) {
+      log.setLevel(1);
       T ret = null;
+      try {
+        Object client = jClient(null, null, -1);
+        Object request = jRequest("https://gitlab.ntiple.com", null);
+        Object handler = JHttpResponseInputStream.invoke(null, EMPTY_OBJ);
+        Method body = getmethod(JHttpResponse, "body", EMPTY_CLS);
+        // log.debug("REQUEST:{}", request);
+        // log.debug("HANDLER:{}", handler);
+        // log.debug("SEND:{}", JHttpClientSend);
+        Object result = JHttpClientSend.invoke(client, arr(request, handler));
+        // log.debug("RESULT:{}", result);
+        ret = cast(body.invoke(result, EMPTY_OBJ), ret);
+        // log.debug("BODY:{}", ret);
+      } catch (Exception e) {
+        // log.debug("CHECK:{}", e);
+      }
       return ret;
     }
   }
 
-  static class StaticProxySelector extends ProxySelector {
+  private static class StaticProxySelector extends ProxySelector {
     private static final List<java.net.Proxy> NO_PROXY_LIST = Arrays.asList(arr(java.net.Proxy.NO_PROXY));
     final List<java.net.Proxy> list;
     StaticProxySelector(InetSocketAddress address) {

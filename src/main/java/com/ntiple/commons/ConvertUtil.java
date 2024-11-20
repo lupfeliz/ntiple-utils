@@ -1313,6 +1313,11 @@ public class ConvertUtil {
         Pattern ptn = Pattern.compile("[{][}]");
         Matcher mat = ptn.matcher(fmt);
         System.out.println(String.format(mat.replaceAll("%s"), args));
+        if (args != null) {
+          for (int inx = 0; inx < args.length; inx++) {
+            if (args[inx] instanceof Throwable) { cast(args[inx], Throwable.class).printStackTrace(); }
+          }
+        }
       }
     }
   }
