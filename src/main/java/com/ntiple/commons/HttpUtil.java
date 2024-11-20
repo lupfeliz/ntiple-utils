@@ -127,12 +127,6 @@ public class HttpUtil {
   private static Class<?> JHttpRequest = null;
   private static Class<?> JHttpResponse = null;
   private static Class<?> JHttpVer;
-  private static Method JHttpClientNewBuilder = null;
-  private static Method JHttpVersion = null;
-  private static Method JHttpProxy = null;
-  private static Method JHttpFloowRedirect = null;
-  private static Method JHttpCookieHandler = null;
-  private static Method JHttpSslContext = null;
   static {
     // log.setLevel(1);
     if (HttpServletRequest == null) {
@@ -257,7 +251,6 @@ public class HttpUtil {
       JHttpResponse = getclass("java.net.http.HttpResponse");
       System.setProperty("jdk.httpclient.allowRestrictedHeaders", "connection,content-length,host,upgrade");
     } catch (Throwable ignore) { log.debug("E:{}", ignore); }
-    // } catch (Throwable e) { e.printStackTrace(); }
   }
 
   public static <T> T httpClient(Class<T> cls) throws Exception { T ret = null; return cast(httpClient(), ret); }
@@ -579,11 +572,6 @@ public class HttpUtil {
           /** name=value&name2=value2 */
           this.query = url.getQuery();
         } catch (MalformedURLException ignore) { }
-        try {
-          jClient(null, "2", null, -1);
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
       }
       this.agent = "HttpClient";
       if (context == null) { context = new LinkedHashMap<>(); }
