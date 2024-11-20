@@ -472,7 +472,7 @@ public class HttpUtil {
     return ret;
   }
 
-  private static Object jClient(String ver, String paddr, int pport) {
+  private static Object jClient(String follow, String ver, String paddr, int pport) {
     Object ret = null;
     Object builder = null;
     Method newBuilder = null;
@@ -508,7 +508,14 @@ public class HttpUtil {
           mProxy.invoke(builder, new StaticProxySelector(new InetSocketAddress(paddr, pport)));
         }
         {
-          mFollowRedirects.invoke(builder, getfieldv(JHttpRedirect, "NORMAL"));
+          String v = "";
+          switch (follow) {
+          case "NORMAL": break;
+          case "NEVER": break;
+          case "ALWAYS": 
+          default: v = "ALWAYS";
+          }
+          mFollowRedirects.invoke(builder, getfieldv(JHttpRedirect, v));
         }
         {
           CookieHandler ckhnd = null;
@@ -639,8 +646,17 @@ public class HttpUtil {
       log.setLevel(1);
       T ret = null;
       try {
-        Object client = jClient(null, null, -1);
-        Object request = jRequest("https://gitlab.ntiple.com", null);
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.protocol)
+          .append("://")
+          .append(this.host)
+          .append(this.port > 0 ? String.valueOf(this.port) : "")
+          .append(this.path != null && !"".equals(this.path) ? this.path : "")
+          .append(this.query != null && !"".equals(this.query) ? cat("?", this.query) : "")
+          ;
+        log.debug("URL:{}", sb);
+        Object client = jClient("ALWAYS", null, null, -1);
+        Object request = jRequest(String.valueOf(sb), null);
         Object handler = JHttpResponseInputStream.invoke(null, EMPTY_OBJ);
         Method body = getmethod(JHttpResponse, "body", EMPTY_CLS);
         // log.debug("REQUEST:{}", request);

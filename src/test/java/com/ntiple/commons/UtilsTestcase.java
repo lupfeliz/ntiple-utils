@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import com.ntiple.commons.HttpUtil.HttpClientWorker;
 
-@SuppressWarnings("unused")
+@SuppressWarnings("all")
 public class UtilsTestcase {
   @Test public void testSimple() throws Exception {
     assertTrue(true);
