@@ -19,17 +19,30 @@ import static com.ntiple.commons.IOUtils.reader;
 import static com.ntiple.commons.IOUtils.safeclose;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.net.CookieHandler;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
+import java.net.ProxySelector;
+import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -40,6 +53,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 import com.ntiple.commons.ConvertUtil.TmpLogger;
 
@@ -105,6 +121,19 @@ public class HttpUtil {
   private static Object sslContext = null;
   private static Object connectionKeepAliveStrategy = null;
   private static Object connectionManager = null;
+
+  private static Class<?> JHttpClient = null;
+  private static Class<?> JHttpClientBuilder = null;
+  private static Class<?> JHttpRedirect = null;
+  private static Class<?> JHttpRequest = null;
+  private static Class<?> JHttpResponse = null;
+  private static Class<?> JHttpVer;
+  private static Method JHttpClientNewBuilder = null;
+  private static Method JHttpVersion = null;
+  private static Method JHttpProxy = null;
+  private static Method JHttpFloowRedirect = null;
+  private static Method JHttpCookieHandler = null;
+  private static Method JHttpSslContext = null;
   static {
     if (HttpServletRequest == null) {
     /** for javax.servlet package (JDK 1.8 ver)  */
@@ -219,6 +248,16 @@ public class HttpUtil {
         connectionManager = getconstr(PoolingHttpClientConnectionManager, arr(Registry)).newInstance(sslBuild.invoke(reg));
       }
     } catch (Throwable ignore) { log.trace("E:{}", ignore); }
+    try {
+      JHttpClient = getclass("java.net.http.HttpClient");
+      JHttpClientBuilder = getclass("java.net.http.HttpClient$Builder");
+      JHttpRedirect = getclass("java.net.http.HttpClient$Redirect");
+      JHttpVer = getclass("java.net.http.HttpClient$Version");
+      JHttpRequest = getclass("java.net.http.HttpRequest");
+      JHttpResponse = getclass("java.net.http.HttpResponse");
+      System.setProperty("jdk.httpclient.allowRestrictedHeaders", "connection,content-length,host,upgrade");
+    // } catch (Throwable ignore) { log.trace("E:{}", ignore); }
+    } catch (Throwable e) { e.printStackTrace(); }
   }
 
   public static <T> T httpClient(Class<T> cls) throws Exception { T ret = null; return cast(httpClient(), ret); }
@@ -434,6 +473,72 @@ public class HttpUtil {
     return ret;
   }
 
+  private static <T> T jClient(Class<T> cls, String ver, String paddr, int pport) {
+    T ret = null;
+    Object builder = null;
+    Method newBuilder = null;
+    Method mVersion = null;
+    Method mProxy = null;
+    Method mFollowRedirects = null;
+    Method mCookieHandler = null;
+    Method mSslContext = null;
+    if (JHttpClient != null) {
+      try {
+        newBuilder = getmethod(JHttpClient, "newBuilder", EMPTY_CLS);
+        builder = newBuilder.invoke(null, EMPTY_OBJ);
+        mVersion = getmethod(JHttpClientBuilder, "version", arr(JHttpVer));
+        mProxy = getmethod(JHttpClientBuilder, "proxy", arr(ProxySelector.class));
+        mFollowRedirects = getmethod(JHttpClientBuilder, "followRedirects", arr(JHttpRedirect));
+        mCookieHandler = getmethod(JHttpClientBuilder, "cookieHandler", arr(CookieHandler.class));
+        mSslContext = getmethod(JHttpClientBuilder, "sslContext", arr(SSLContext.class));
+        {
+          Object v = null;
+          switch (ver) {
+          case "2": {
+            v = getfieldv(JHttpVer, "HTTP_2", builder);
+          } break;
+          default: {
+            v = getfieldv(JHttpVer, "HTTP_1_1", builder);
+          } }
+          mVersion.invoke(builder, v);
+        }
+        if (paddr != null && pport != -1) {
+          mProxy.invoke(builder, new StaticProxySelector(new InetSocketAddress(paddr, pport)));
+        }
+        {
+          mFollowRedirects.invoke(builder, getfieldv(JHttpRedirect, "NORMAL", builder));
+        }
+        {
+          CookieHandler ckhnd = null;
+          CookieManager ckmng = new CookieManager();
+          ckmng.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+          CookieHandler.setDefault(ckmng);
+          ckhnd = CookieHandler.getDefault();
+          mCookieHandler.invoke(builder, ckhnd);
+        }
+        {
+          X509ExtendedTrustManager trustManager = new X509ExtendedTrustManager() {
+            @Override public void checkClientTrusted(X509Certificate[] x, String a) throws CertificateException { }
+            @Override public void checkServerTrusted(X509Certificate[] x, String a) throws CertificateException { }
+            @Override public void checkClientTrusted(X509Certificate[] x, String a, Socket s) throws CertificateException { }
+            @Override public void checkClientTrusted(X509Certificate[] x, String a, SSLEngine e) throws CertificateException { }
+            @Override public void checkServerTrusted(X509Certificate[] x, String a, Socket s) throws CertificateException { }
+            @Override public void checkServerTrusted(X509Certificate[] x, String a, SSLEngine e) throws CertificateException { }
+            @Override public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[] {}; }
+          };
+          SSLContext sslContext = SSLContext.getInstance("TLS");
+          sslContext.init(null, new TrustManager[] { trustManager }, new SecureRandom());
+          mSslContext.invoke(builder, sslContext);
+        }
+        // System.out.println("================================================================================");
+        // System.out.println(String.format("CHECK: %s", builder));
+        // System.out.println("================================================================================");
+      } catch (Exception ignore) { log.trace("E:{}", ignore); }
+      // } catch (Exception e) { e.printStackTrace(); }
+    }
+    return ret;
+  }
+
   public static HttpClientWorker worker(String url) {
     HttpClientWorker worker = new HttpClientWorker(url);
     return worker;
@@ -441,6 +546,7 @@ public class HttpUtil {
 
   public static class HttpClientWorker {
     private String protocol;
+    private String agent;
     private String host;
     private int port;
     private String path;
@@ -448,22 +554,38 @@ public class HttpUtil {
     private String version;
     private String method;
     private Object body;
+    private String proxyaddr;
+    private int proxyport;
+    private Map<String, String> headers;
+    private Map<String, Object> context;
 
-    public HttpClientWorker(String ustr) {
-      URL url = null;
-      try {
-        url = new URL(ustr);
-        /** http, https */
-        this.protocol = url.getProtocol();
-        /** domain.com */
-        this.host = url.getHost();
-        /** -1, 80, 443 */
-        this.port = url.getPort();
-        /** /uri */
-        this.path = url.getPath();
-        /** name=value&name2=value2 */
-        this.query = url.getQuery();
-      } catch (MalformedURLException ignore) { }
+    public HttpClientWorker() { this(null, new LinkedHashMap<>()); }
+    public HttpClientWorker(String ustr) { this(ustr, new LinkedHashMap<>()); }
+    public HttpClientWorker(String ustr, Map<String, Object> context) {
+      if (ustr != null && !"".equals(ustr)) {
+        try {
+          URL url = null;
+          url = new URL(ustr);
+          /** http, https */
+          this.protocol = url.getProtocol();
+          /** domain.com */
+          this.host = url.getHost();
+          /** -1, 80, 443 */
+          this.port = url.getPort();
+          /** /uri */
+          this.path = url.getPath();
+          /** name=value&name2=value2 */
+          this.query = url.getQuery();
+        } catch (MalformedURLException ignore) { }
+        // try {
+        //   jClient(null, "2", null, -1);
+        // } catch (Exception e) {
+        //   e.printStackTrace();
+        // }
+      }
+      this.agent = "HttpClient";
+      if (context == null) { context = new LinkedHashMap<>(); }
+      this.context = context; 
     }
 
     public HttpClientWorker proxy(String proxy) {
@@ -471,6 +593,11 @@ public class HttpUtil {
     }
 
     public HttpClientWorker ipAddr(String ipAddr) {
+      return this;
+    }
+
+    public HttpClientWorker agent(String agent) {
+      this.agent = agent;
       return this;
     }
 
@@ -483,17 +610,45 @@ public class HttpUtil {
       return this;
     }
 
-    public HttpClientWorker body(Callable<?> exec) {
+    public HttpClientWorker body(Object body) {
       return this;
     }
 
-    public HttpClientWorker body(Object body) {
+    public HttpClientWorker context(Map<String, Object> context) {
+      this.context = context;
       return this;
+    }
+    public Map<String, Object> context() {
+      return context;
     }
 
     public <T> T work(Class<T> cls) {
       T ret = null;
       return ret;
+    }
+  }
+
+  static class StaticProxySelector extends ProxySelector {
+    private static final List<java.net.Proxy> NO_PROXY_LIST = Arrays.asList(arr(java.net.Proxy.NO_PROXY));
+    final List<java.net.Proxy> list;
+    StaticProxySelector(InetSocketAddress address) {
+      java.net.Proxy p;
+      if (address == null) {
+        p = java.net.Proxy.NO_PROXY;
+      } else {
+        p = new java.net.Proxy(java.net.Proxy.Type.HTTP, address);
+      }
+      list = Arrays.asList(arr(p));
+    }
+
+    @Override public void connectFailed(URI uri, SocketAddress sa, IOException e) { }
+    @Override public synchronized List<java.net.Proxy> select(URI uri) {
+      String scheme = uri.getScheme().toLowerCase();
+      if (scheme.equals("http") || scheme.equals("https")) {
+        return list;
+      } else {
+        return NO_PROXY_LIST;
+      }
     }
   }
 }
