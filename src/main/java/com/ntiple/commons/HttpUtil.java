@@ -726,6 +726,8 @@ public class HttpUtil {
           .append(this.query != null && !"".equals(this.query) ? cat("?", this.query) : "")
           ;
         log.debug("URL:{}", urlStr);
+        boolean hasbody = false;
+        Constructor<?> constr = null;
         switch (HttpClientProviders.valueOf(this.provider)) {
         case JDK_11: {
           Object client = jClient(this.context, "ALWAYS", null, null, -1);
@@ -755,33 +757,47 @@ public class HttpUtil {
         default: {
           Object request = null;
           switch (HttpMethod.valueOf(this.method)) {
-          case POST: {
-            request = HttpPostConstr.newInstance(String.valueOf(urlStr));
+          case POST:
+            constr = HttpPostConstr;
+            hasbody = true;
+            break;
+          case DELETE:
+            constr = HttpDeleteConstr;
+            hasbody = false;
+            break;
+          case PUT: 
+            constr = HttpPutConstr;
+            hasbody = true;
+            break;
+          case HEAD:
+            constr = HttpHeadConstr;
+            hasbody = false;
+            break;
+          case OPTIONS: 
+            constr = HttpOptionsConstr;
+            hasbody = false;
+            break;
+          case PATCH:
+            constr = HttpPatchConstr;
+            hasbody = true;
+            break;
+          case TRACE:
+            constr = HttpTraceConstr;
+            hasbody = false;
+            break;
+          case GET: default: 
+            constr = HttpGetConstr;
+            hasbody = false;
+            break;
+          }
+          if (constr != null) {
+            request = constr.newInstance(String.valueOf(urlStr));
+          }
+          if (hasbody) {
+            /** TODO: content-type에 따라 url-form-encoded / json 등 다른 처리 필요 */
             Object entity = StringEntityConstr.newInstance(convert(this.contents, ""), UTF8);
             HttpRequestSetEntity.invoke(request, entity);
-          } break;
-          case DELETE: {
-            request = HttpDeleteConstr.newInstance(String.valueOf(urlStr));
-          } break;
-          case PUT: {
-            request = HttpPutConstr.newInstance(String.valueOf(urlStr));
-          } break;
-          case HEAD: {
-            request = HttpHeadConstr.newInstance(String.valueOf(urlStr));
-          } break;
-          case OPTIONS: {
-            request = HttpOptionsConstr.newInstance(String.valueOf(urlStr));
-          } break;
-          case PATCH: {
-            request = HttpPatchConstr.newInstance(String.valueOf(urlStr));
-          } break;
-          case TRACE: {
-            request = HttpTraceConstr.newInstance(String.valueOf(urlStr));
-          } break;
-          case GET: default: {
-            request = HttpGetConstr.newInstance(String.valueOf(urlStr));
-          } }
-          // List<Object> headerList = new ArrayList<>();
+          }
           for (String name : this.headers.keySet()) {
             Object value = this.headers.get(name);
             HttpMessageSetHeader.invoke(request, array(name, value));
