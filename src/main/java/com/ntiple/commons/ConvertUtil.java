@@ -353,6 +353,7 @@ public class ConvertUtil {
     Class<?> type = ret.getClass();
     Class<?> ptype = null;
     if (ret instanceof Map) { return cast(map, ret); }
+    if (ret instanceof String) { return cast(mapToJSONStr(map), ret); }
     for (String key : map.keySet()) {
       item = map.get(key);
       if (methods != null) {
@@ -617,6 +618,59 @@ public class ConvertUtil {
       cld.setTimeInMillis(ct);
     }
     return cld;
+  }
+
+  public static String mapToJSONStr(Object obj) {
+    StringBuilder ret = new StringBuilder();
+    if (obj == null) { return String.valueOf(ret); }
+    Class<?> type = obj.getClass();
+    if (obj instanceof Map) {
+      Map<String, Object> map = cast(obj, map = null);
+      ret.append("{");
+      for (String key : map.keySet()) {
+        if (ret.length() > 1) { ret.append(","); }
+        Object val = map.get(key);
+        ret
+          .append("\"")
+          .append(key)
+          .append("\":");
+        ret.append(mapToJSONStr(val));
+      }
+      ret.append("}");
+    } else if (obj instanceof List) {
+      List<Object> list = cast(obj, list = null);
+      ret.append("[");
+      for (int inx = 0; inx < list.size(); inx++) {
+        if (inx > 0) { ret.append(","); }
+        Object val = list.get(inx);
+        ret.append(mapToJSONStr(val));
+      }
+      ret.append("]");
+    } else if (obj instanceof Object[]) {
+      Object[] list = cast(obj, list = null);
+      ret.append("[");
+      for (int inx = 0; inx < list.length; inx++) {
+        if (inx > 0) { ret.append(","); }
+        Object val = list[inx];
+        ret.append(mapToJSONStr(val));
+      }
+      ret.append("]");
+    } else if (obj instanceof String) {
+      ret
+        .append("\"")
+        .append(String.valueOf(obj))
+        .append("\"");
+    } else if (type == String.class ||
+      type == int.class || type == Integer.class ||
+      type == long.class || type == Long.class ||
+      type == short.class || type == Short.class ||
+      type == byte.class || type == Byte.class ||
+      type == float.class || type == Float.class ||
+      type == double.class || type == Double.class ||
+      type == boolean.class || type == Boolean.class) {
+      ret.append(String.valueOf(obj));
+    }
+    return String.valueOf(ret);
   }
 
   public static class DateTime {

@@ -11,6 +11,7 @@ import static com.ntiple.commons.Constants.S_HTTP;
 import static com.ntiple.commons.Constants.S_HTTPS;
 import static com.ntiple.commons.Constants.UTF8;
 import static com.ntiple.commons.ConvertUtil.array;
+import static com.ntiple.commons.ConvertUtil.convert;
 import static com.ntiple.commons.ConvertUtil.newMap;
 import static com.ntiple.commons.IOUtils.reader;
 import static com.ntiple.commons.IOUtils.safeclose;
@@ -60,8 +61,8 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 
-import com.ntiple.commons.FunctionUtil.Fn2a;
-import com.ntiple.commons.FunctionUtil.Fn3a;
+import com.ntiple.commons.FunctionUtil.Fn1a;
+import com.ntiple.commons.FunctionUtil.Fn4a;
 
 public class HttpUtil {
   private static final SimpleLogger log = SimpleLogger.getLogger();
@@ -73,6 +74,14 @@ public class HttpUtil {
   private static Class<?> HttpServletRequest = null;
   private static Class<?> HttpClient = null;
   private static Class<?> HttpHost = null;
+  private static Constructor<?> HttpGetConstr = null;
+  private static Constructor<?> HttpPostConstr = null;
+  private static Constructor<?> HttpDeleteConstr = null;
+  private static Constructor<?> HttpHeadConstr = null;
+  private static Constructor<?> HttpOptionsConstr = null;
+  private static Constructor<?> HttpPatchConstr = null;
+  private static Constructor<?> HttpPutConstr = null;
+  private static Constructor<?> HttpTraceConstr = null;
   private static Constructor<?> HttpHostConstr = null;
   private static Method HCBCreate = null;
   private static Method HCBBuild = null;
@@ -91,6 +100,8 @@ public class HttpUtil {
   private static Method RequestGetAttribute = null;
   private static Method HttpClientExecute1 = null;
   private static Method HttpClientExecute2 = null;
+  private static Method HttpMessageSetHeader = null;
+  private static Method HttpRequestSetEntity = null;
 
   private static Class<?> LaxRedirectStrategy = null;
   private static Class<?> BasicCookieStore = null;
@@ -136,6 +147,23 @@ public class HttpUtil {
       HttpHostConstr = findConstructor(HttpHost, array(String.class, int.class, String.class));
       HttpClient = findClass("org.apache.http.client.HttpClient");
       Class<?> HttpClientBuilder = findClass("org.apache.http.impl.client.HttpClientBuilder");
+      Class<?> HttpGet = findClass("org.apache.http.client.methods.HttpGet");
+      HttpGetConstr = findConstructor(HttpGet, array(String.class));
+      Class<?> HttpPost = findClass("org.apache.http.client.methods.HttpPost");
+      HttpPostConstr = findConstructor(HttpPost, array(String.class));
+      Class<?> HttpDelete = findClass("org.apache.http.client.methods.HttpDelete");
+      HttpDeleteConstr = findConstructor(HttpDelete, array(String.class));
+      Class<?> HttpHead = findClass("org.apache.http.client.methods.HttpHead");
+      HttpHeadConstr = findConstructor(HttpHead, array(String.class));
+      Class<?> HttpOptions = findClass("org.apache.http.client.methods.HttpOptions");
+      HttpOptionsConstr = findConstructor(HttpOptions, array(String.class));
+      Class<?> HttpPatch = findClass("org.apache.http.client.methods.HttpPatch");
+      HttpPatchConstr = findConstructor(HttpPatch, array(String.class));
+      Class<?> HttpPut = findClass("org.apache.http.client.methods.HttpPut");
+      HttpPutConstr = findConstructor(HttpPut, array(String.class));
+      Class<?> HttpTrace = findClass("org.apache.http.client.methods.HttpTrace");
+      HttpTraceConstr = findConstructor(HttpTrace, array(String.class));
+
       LaxRedirectStrategy = findClass("org.apache.http.impl.client.LaxRedirectStrategy");
       BasicCookieStore = findClass("org.apache.http.impl.client.BasicCookieStore");
       Class<?> RedirectStrategy = findClass("org.apache.http.client.RedirectStrategy");
@@ -167,10 +195,16 @@ public class HttpUtil {
         Class<?> HttpResponse = findClass("org.apache.http.HttpResponse");
         ResponseGetEntity = findMethod(HttpResponse, "getEntity", EMPTY_CLS);
         HttpEntityGetContent = findMethod(HttpEntity, "getContent", EMPTY_CLS);
+        Class<?> HttpEntityRequestBase = findClass("org.apache.http.client.methods.HttpEntityEnclosingRequestBase");
+        HttpRequestSetEntity = findMethod(HttpEntityRequestBase, "setEntity", array(HttpEntity));
       }
       {
         Class<?> BasicHeader = findClass("org.apache.http.message.BasicHeader");
         BasicHeaderConstr = findConstructor(BasicHeader, array(String.class, String.class));
+      }
+      {
+        Class<?> HttpMessage = findClass("org.apache.http.HttpMessage");
+        HttpMessageSetHeader = findMethod(HttpMessage, "setHeader", array(String.class, String.class));
       }
       UrlEncodedFormEntity = findClass("org.apache.http.client.entity.UrlEncodedFormEntity");
       UrlEncodedFormEntityConstr = findConstructor(UrlEncodedFormEntity, array(List.class, String.class));
@@ -568,6 +602,23 @@ public class HttpUtil {
     return worker;
   }
 
+  public enum HttpClientProviders {
+    APACHE_CLIENT_4_5,
+    JDK_11,
+    URL_CONNECT
+  }
+
+  public enum HttpMethod {
+    DELETE,
+    GET,
+    HEAD,
+    OPTIONS,
+    PATCH,
+    POST,
+    PUT,
+    TRACE
+  }
+
   public static class HttpClientWorker {
     private String provider;
     private String protocol;
@@ -578,10 +629,10 @@ public class HttpUtil {
     private String query;
     private String version;
     private String method;
-    private Object body;
     private String proxyaddr;
     private int proxyport;
-    private Map<String, String> headers;
+    private Map<String, Object> headers;
+    private Map<String, Object> contents;
     private Map<String, Object> context;
 
     public HttpClientWorker() { this(null, new LinkedHashMap<>()); }
@@ -608,7 +659,10 @@ public class HttpUtil {
       this.context = context; 
     }
 
-    public HttpClientWorker provider(String provider) {
+    public HttpClientWorker provider(Fn1a<HttpClientProviders, HttpClientProviders> calable) {
+      HttpClientProviders v = calable.apply(HttpClientProviders.APACHE_CLIENT_4_5);
+      String provider = null;
+      if (v != null) { provider = v.name(); }
       this.provider = provider;
       return this;
     }
@@ -631,11 +685,21 @@ public class HttpUtil {
       return this;
     }
 
-    public HttpClientWorker method(String method) {
+    public HttpClientWorker method(Fn1a<HttpMethod, HttpMethod> calable) {
+      HttpMethod v = calable.apply(HttpMethod.GET);
+      String method = null;
+      if (v != null) { method = v.name(); }
+      this.method = method;
       return this;
     }
 
-    public HttpClientWorker body(Object body) {
+    public HttpClientWorker headers(Map<String, Object> headers) {
+      this.headers = headers;
+      return this;
+    }
+
+    public HttpClientWorker contents(Map<String, Object> contents) {
+      this.contents = contents;
       return this;
     }
 
@@ -647,43 +711,89 @@ public class HttpUtil {
       return context;
     }
 
-    public Object work(Fn3a<Integer, InputStream, Map<String, List<String>>, Object> callable) {
+    public Object work(Fn4a<Integer, InputStream, Map<String, List<String>>, Map<String, Object>, Object> callable) {
       Object ret = null;
       InputStream istream = null;
       Integer state = -1;
       Map<String, List<String>> headerMap = null;
       try {
-        StringBuilder sb = new StringBuilder();
-        sb.append(this.protocol)
+        StringBuilder urlStr = new StringBuilder();
+        urlStr.append(this.protocol)
           .append("://")
           .append(this.host)
-          .append(this.port > 0 ? String.valueOf(this.port) : "")
+          .append(this.port > 0 ? cat(":", this.port) : "")
           .append(this.path != null && !"".equals(this.path) ? this.path : "")
           .append(this.query != null && !"".equals(this.query) ? cat("?", this.query) : "")
           ;
-        log.debug("URL:{}", sb);
-        Object client = jClient(this.context, "ALWAYS", null, null, -1);
-        Object request = jRequest(this.context, String.valueOf(sb), null);
-        Object handler = JHttpResponseInputStream.invoke(null, EMPTY_OBJ);
-        Method getStatusCode = findMethod(JHttpResponse, "statusCode", EMPTY_CLS);
-        Method getBody = findMethod(JHttpResponse, "body", EMPTY_CLS);
-        Method getHeaders = findMethod(JHttpResponse, "headers", EMPTY_CLS);
-        Method getMap = findMethod(JHttpHeaders, "map", EMPTY_CLS);
-        // log.debug("REQUEST:{}", request);
-        // log.debug("HANDLER:{}", handler);
-        // log.debug("SEND:{}", JHttpClientSend);
-        Object result = JHttpClientSend.invoke(client, array(request, handler));
-        // log.debug("RESULT:{}", result);
-        state = cast(getStatusCode.invoke(result, EMPTY_OBJ), state);
-        istream = cast(getBody.invoke(result, EMPTY_OBJ), istream);
-        {
-          Object obj = getHeaders.invoke(result, EMPTY_OBJ);
-          if (obj != null) { obj = getMap.invoke(obj, EMPTY_OBJ); }
-          if (obj != null) { headerMap = cast(obj, headerMap); }
-        }
-        if (headerMap == null) { headerMap = cast(newMap(), headerMap = null); }
-        ret = cast(callable.apply(state, istream, headerMap), ret);
-        // log.debug("BODY:{}", ret);
+        log.debug("URL:{}", urlStr);
+        switch (HttpClientProviders.valueOf(this.provider)) {
+        case JDK_11: {
+          Object client = jClient(this.context, "ALWAYS", null, null, -1);
+          Object request = jRequest(this.context, String.valueOf(urlStr), null);
+          Object handler = JHttpResponseInputStream.invoke(null, EMPTY_OBJ);
+          Method getStatusCode = findMethod(JHttpResponse, "statusCode", EMPTY_CLS);
+          Method getBody = findMethod(JHttpResponse, "body", EMPTY_CLS);
+          Method getHeaders = findMethod(JHttpResponse, "headers", EMPTY_CLS);
+          Method getMap = findMethod(JHttpHeaders, "map", EMPTY_CLS);
+          // log.debug("REQUEST:{}", request);
+          // log.debug("HANDLER:{}", handler);
+          // log.debug("SEND:{}", JHttpClientSend);
+          Object result = JHttpClientSend.invoke(client, array(request, handler));
+          // log.debug("RESULT:{}", result);
+          state = cast(getStatusCode.invoke(result, EMPTY_OBJ), state);
+          istream = cast(getBody.invoke(result, EMPTY_OBJ), istream);
+          {
+            Object obj = getHeaders.invoke(result, EMPTY_OBJ);
+            if (obj != null) { obj = getMap.invoke(obj, EMPTY_OBJ); }
+            if (obj != null) { headerMap = cast(obj, headerMap); }
+          }
+          if (headerMap == null) { headerMap = cast(newMap(), headerMap = null); }
+          ret = cast(callable.apply(state, istream, headerMap, this.context), ret);
+          // log.debug("BODY:{}", ret);
+        } break;
+        case APACHE_CLIENT_4_5: 
+        default: {
+          Object request = null;
+          switch (HttpMethod.valueOf(this.method)) {
+          case POST: {
+            request = HttpPostConstr.newInstance(String.valueOf(urlStr));
+            Object entity = StringEntityConstr.newInstance(convert(this.contents, ""), UTF8);
+            HttpRequestSetEntity.invoke(request, entity);
+          } break;
+          case DELETE: {
+            request = HttpDeleteConstr.newInstance(String.valueOf(urlStr));
+          } break;
+          case PUT: {
+            request = HttpPutConstr.newInstance(String.valueOf(urlStr));
+          } break;
+          case HEAD: {
+            request = HttpHeadConstr.newInstance(String.valueOf(urlStr));
+          } break;
+          case OPTIONS: {
+            request = HttpOptionsConstr.newInstance(String.valueOf(urlStr));
+          } break;
+          case PATCH: {
+            request = HttpPatchConstr.newInstance(String.valueOf(urlStr));
+          } break;
+          case TRACE: {
+            request = HttpTraceConstr.newInstance(String.valueOf(urlStr));
+          } break;
+          case GET: default: {
+            request = HttpGetConstr.newInstance(String.valueOf(urlStr));
+          } }
+          // List<Object> headerList = new ArrayList<>();
+          for (String name : this.headers.keySet()) {
+            Object value = this.headers.get(name);
+            HttpMessageSetHeader.invoke(request, array(name, value));
+          }
+          Object client = context.get(HttpClient.getName());
+          if (client == null) { context.put(HttpClient.getName(), client = httpClient()); }
+          Object result = execute(client, null, request, null, Object.class);
+          Object entity = ResponseGetEntity.invoke(result, EMPTY_OBJ);
+          istream = cast(HttpEntityGetContent.invoke(entity, EMPTY_OBJ), InputStream.class);
+          if (headerMap == null) { headerMap = cast(newMap(), headerMap = null); }
+          ret = cast(callable.apply(state, istream, headerMap, this.context), ret);
+        } }
       } catch (Exception e) {
         log.debug("E:{}", e);
       } finally {

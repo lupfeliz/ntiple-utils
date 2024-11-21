@@ -8,6 +8,8 @@
 package com.ntiple.commons;
 
 import static com.ntiple.commons.Constants.UTF8;
+import static com.ntiple.commons.ConvertUtil.convert;
+import static com.ntiple.commons.ConvertUtil.newMap;
 import static com.ntiple.commons.HttpUtil.httpWorker;
 import static com.ntiple.commons.IOUtils.readAsString;
 import static com.ntiple.commons.IOUtils.reader;
@@ -32,11 +34,46 @@ public class UtilsTestcase {
   }
 
   @Test public void testHttpClient() throws Exception {
+    // sh gradlew cleanTest test -Dproject.build.test=MANUAL -i --no-watch-fs --tests "com.ntiple.commons.UtilsTestcase.testHttpClient"
     if (!TestUtil.isEnabled("testHttpClient", TestLevel.MANUAL)) { return; }
     SimpleLogger log = SimpleLogger.getLogger();
-    // sh gradlew cleanTest test -Dproject.build.test=MANUAL -i --no-watch-fs --tests "com.ntiple.commons.UtilsTestcase.testHttpClient"
-    String content = cast(httpWorker("https://gitlab.ntiple.com")
-      .work((state, istream, headers) -> {
+    // String content = cast(httpWorker("https://gitlab.ntiple.com")
+    String content = cast(httpWorker("https://www.naver.com")
+      .provider(p -> p.JDK_11)
+      .method(p -> p.GET)
+      .work((state, istream, headers, context) -> {
+        log.setLevel(1);
+        Object ret = null;
+        try {
+          ret = readAsString(istream, UTF8);
+        } catch (Exception e) { log.debug("E:{}", e); }
+        log.debug("HEADERS:{}", headers);
+        return ret;
+      }), content = null);
+    log.debug("CONTENT:{}", content);
+  }
+
+  @Test public void testApacheHttpClient() throws Exception {
+    // sh gradlew cleanTest test -Dproject.build.test=MANUAL -i --no-watch-fs --tests "com.ntiple.commons.UtilsTestcase.testApacheHttpClient"
+    if (!TestUtil.isEnabled("testApacheHttpClient", TestLevel.MANUAL)) { return; }
+    SimpleLogger log = SimpleLogger.getLogger();
+    log.setLevel(1);
+    // String content = cast(httpWorker("https://gitlab.ntiple.com")
+    // String content = cast(httpWorker("https://www.naver.com")
+    // String content = cast(httpWorker("https://devlog.ntiple.com/devwas9998/study202403/api/cmn/cmn01001")
+
+    String content = cast(httpWorker("https://devlog.ntiple.com/devwas9998/study202403/api/atc/atc01001")
+      .provider(p -> p.APACHE_CLIENT_4_5)
+      .method(p -> p.POST)
+      .headers(convert(new Object[][] {
+        { "Content-Type", "application/json" },
+      }, newMap()))
+      .contents(convert(new Object[][] {
+        { "searchType", "" },
+        { "rowStart", 0 },
+        { "rowCount", 10 }
+      }, newMap()))
+      .work((state, istream, headers, context) -> {
         log.setLevel(1);
         Object ret = null;
         try {
