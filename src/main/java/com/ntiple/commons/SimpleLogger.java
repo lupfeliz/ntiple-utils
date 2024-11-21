@@ -24,6 +24,7 @@ public class SimpleLogger {
     }
     return inst;
   }
+  public int getLevel() { return this.level; }
   public void setLevel(int level) { this.level = level; }
   public void setAppender(PrintStream appender) { this.appender = appender; }
   public void trace(String fmt, Object... args) { _print(0, fmt, args); }

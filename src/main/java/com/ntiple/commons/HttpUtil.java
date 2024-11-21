@@ -47,6 +47,7 @@ import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
@@ -129,7 +130,8 @@ public class HttpUtil {
   private static Method JHttpClientSend = null;
   private static Method JHttpResponseInputStream = null;
   static {
-    // log.setLevel(1);
+    int logLevel = log.getLevel();
+    log.setLevel(4);
     if (HttpServletRequest == null) {
     /** for javax.servlet package (JDK 1.8 ver)  */
       try {
@@ -280,6 +282,7 @@ public class HttpUtil {
       JHttpResponseInputStream = findMethod(JHttpBodyHandlers, "ofInputStream", EMPTY_CLS);
       System.setProperty("jdk.httpclient.allowRestrictedHeaders", "connection,content-length,host,upgrade");
     } catch (Throwable ignore) { log.debug("E:{}", ignore); }
+    log.setLevel(logLevel);
   }
 
   public static <T> T httpClient(Class<T> cls) throws Exception { T ret = null; return cast(httpClient(), ret); }
@@ -632,7 +635,7 @@ public class HttpUtil {
     private String proxyaddr;
     private int proxyport;
     private Map<String, Object> headers;
-    private Map<String, Object> contents;
+    private Object contents;
     private Map<String, Object> context;
 
     public HttpClientWorker() { this(null, new LinkedHashMap<>()); }
@@ -698,7 +701,7 @@ public class HttpUtil {
       return this;
     }
 
-    public HttpClientWorker contents(Map<String, Object> contents) {
+    public HttpClientWorker contents(Object contents) {
       this.contents = contents;
       return this;
     }
@@ -730,7 +733,7 @@ public class HttpUtil {
         Constructor<?> constr = null;
         if (this.provider == null || "".equals(this.provider)) { this.provider = HttpClientProviders.APACHE_CLIENT_4_5.name(); }
         if (this.method == null || "".equals(this.method)) { this.method = HttpMethod.GET.name(); }
-        switch (HttpClientProviders.valueOf(this.provider)) {
+        SW1: switch (HttpClientProviders.valueOf(this.provider)) {
         case JDK_11: {
           Object client = jClient(this.context, "ALWAYS", null, null, -1);
           Object request = jRequest(this.context, String.valueOf(urlStr), null);
@@ -754,32 +757,65 @@ public class HttpUtil {
           if (headerMap == null) { headerMap = cast(newMap(), headerMap = null); }
           ret = cast(callable.apply(state, istream, headerMap, this.context), ret);
           // log.debug("BODY:{}", ret);
-        } break;
+        } break SW1;
         case APACHE_CLIENT_4_5: 
         default: {
           Object request = null;
-          switch (HttpMethod.valueOf(this.method)) {
-          case POST:    { constr = HttpPostConstr;    hasbody = true;  } break;
-          case DELETE:  { constr = HttpDeleteConstr;  hasbody = false; } break;
-          case PUT:     { constr = HttpPutConstr;     hasbody = true;  } break;
-          case HEAD:    { constr = HttpHeadConstr;    hasbody = false; } break;
-          case OPTIONS: { constr = HttpOptionsConstr; hasbody = false; } break;
-          case PATCH:   { constr = HttpPatchConstr;   hasbody = true;  } break;
-          case TRACE:   { constr = HttpTraceConstr;   hasbody = false; } break;
+          SW2: switch (HttpMethod.valueOf(this.method)) {
+          case POST:    { constr = HttpPostConstr;    hasbody = true;  } break SW2;
+          case DELETE:  { constr = HttpDeleteConstr;  hasbody = false; } break SW2;
+          case PUT:     { constr = HttpPutConstr;     hasbody = true;  } break SW2;
+          case HEAD:    { constr = HttpHeadConstr;    hasbody = false; } break SW2;
+          case OPTIONS: { constr = HttpOptionsConstr; hasbody = false; } break SW2;
+          case PATCH:   { constr = HttpPatchConstr;   hasbody = true;  } break SW2;
+          case TRACE:   { constr = HttpTraceConstr;   hasbody = false; } break SW2;
           case GET:
-          default:      { constr = HttpGetConstr;     hasbody = false; } break;
+          default:      { constr = HttpGetConstr;     hasbody = false; } break SW2;
           }
+          String ctype = "";
+          String chset = UTF8;
           if (constr != null) {
             request = constr.newInstance(String.valueOf(urlStr));
           }
-          if (hasbody) {
-            /** TODO: content-type에 따라 url-form-encoded / json 등 다른 처리 필요 */
-            Object entity = StringEntityConstr.newInstance(convert(this.contents, ""), UTF8);
-            HttpRequestSetEntity.invoke(request, entity);
+          final Pattern PTN_CHARSET = Pattern.compile("[ ]*charset[ ]*=[ ]*(?<chset>[a-zA-Z0-9_-]+)", Pattern.CASE_INSENSITIVE);
+          Matcher mat;
+          LOOP: for (String name : this.headers.keySet()) {
+            if (name == null || "".equals(name)) { continue LOOP; }
+            String value = cast(this.headers.get(name), "");
+            HttpMessageSetHeader.invoke(request, name, value);
+            String key = name.toLowerCase().trim();
+            if ("content-type".equals(key) && value != null && !"".equals(value)) {
+              String[] data = value.split(";");
+              ctype = data[0].toLowerCase().trim();
+              if (data.length > 0 && (mat = PTN_CHARSET.matcher(data[1])) != null && mat.find()) {
+                chset = mat.group("chset");
+              }
+            }
           }
-          for (String name : this.headers.keySet()) {
-            Object value = this.headers.get(name);
-            HttpMessageSetHeader.invoke(request, array(name, value));
+          log.debug("CHECK-TYPE:{} / {}", ctype, chset);
+          if (hasbody) {
+            Object entity = null;
+            SW3: switch (ctype) {
+            case "multipart/form-data": {
+              /** TODO: multipart 구현 필요 */
+            } break SW3;
+            case "text/plain": {
+              entity = StringEntityConstr.newInstance(String.valueOf(this.contents != null ? this.contents : ""), chset);
+            } break SW3;
+            case "application/json": {
+              entity = StringEntityConstr.newInstance(convert(this.contents, ""), chset);
+            } break SW3;
+            case "application/x-www-form-urlencoded":
+            default: {
+              Map<String, Object> map = convert(this.contents, newMap());
+              List<Object> list = new ArrayList<>();
+              for (String key : map.keySet()) {
+                Object val = map.get(key);
+                list.add(BasicNameValuePairConstr.newInstance(key, String.valueOf(val != null ? val : "")));
+              }
+              entity = UrlEncodedFormEntityConstr.newInstance(array(list, chset));
+            } break SW3; }
+            HttpRequestSetEntity.invoke(request, entity);
           }
           Object client = context.get(HttpClient.getName());
           if (client == null) { context.put(HttpClient.getName(), client = httpClient()); }
@@ -788,7 +824,7 @@ public class HttpUtil {
           istream = cast(HttpEntityGetContent.invoke(entity, EMPTY_OBJ), InputStream.class);
           if (headerMap == null) { headerMap = cast(newMap(), headerMap = null); }
           ret = cast(callable.apply(state, istream, headerMap, this.context), ret);
-        } }
+        } break SW1; }
       } catch (Exception e) {
         log.debug("E:{}", e);
       } finally {

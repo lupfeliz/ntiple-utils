@@ -58,30 +58,27 @@ public class UtilsTestcase {
     if (!TestUtil.isEnabled("testApacheHttpClient", TestLevel.MANUAL)) { return; }
     SimpleLogger log = SimpleLogger.getLogger();
     log.setLevel(1);
-    // String content = cast(httpWorker("https://gitlab.ntiple.com")
-    // String content = cast(httpWorker("https://www.naver.com")
-    // String content = cast(httpWorker("https://devlog.ntiple.com/devwas9998/study202403/api/cmn/cmn01001")
-
-    String content = cast(httpWorker("https://devlog.ntiple.com/devwas9998/study202403/api/atc/atc01001")
+    StringBuilder content = new StringBuilder();
+    httpWorker("https://devlog.ntiple.com/devwas9998/study202403/api/atc/atc01001")
+    // httpWorker("http://devsup.ntiple.com:10002/smp/smp01001p01")
       .provider(p -> p.APACHE_CLIENT_4_5)
       .method(p -> p.POST)
       .headers(convert(new Object[][] {
         { "Content-Type", "application/json; charset=UTF-8" },
+        // { "Content-Type", "application/x-www-form-urlencoded; charset=UTF-8" },
       }, newMap()))
       .contents(convert(new Object[][] {
         { "searchType", "" },
         { "rowStart", 0 },
         { "rowCount", 10 }
       }, newMap()))
-      .work((state, istream, headers, context) -> {
-        log.setLevel(1);
-        Object ret = null;
+      .work((stat, stream, header, ctx) -> {
         try {
-          ret = readAsString(istream, UTF8);
+          content.append(readAsString(stream, UTF8));
         } catch (Exception e) { log.debug("E:{}", e); }
-        log.debug("HEADERS:{}", headers);
-        return ret;
-      }), content = null);
+        // log.debug("HEADERS:{}", header);
+        return content;
+      });
     log.debug("CONTENT:{}", content);
   }
 }
