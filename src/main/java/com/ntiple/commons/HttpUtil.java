@@ -13,6 +13,7 @@ import static com.ntiple.commons.Constants.UTF8;
 import static com.ntiple.commons.ConvertUtil.array;
 import static com.ntiple.commons.ConvertUtil.convert;
 import static com.ntiple.commons.ConvertUtil.newMap;
+import static com.ntiple.commons.ConvertUtil.parseInt;
 import static com.ntiple.commons.IOUtils.reader;
 import static com.ntiple.commons.IOUtils.safeclose;
 import static com.ntiple.commons.ReflectionUtil.cast;
@@ -640,7 +641,7 @@ public class HttpUtil {
     private String protocol;
     private String agent;
     private String host;
-    private String hostname;
+    private String [] address;
     private int port;
     private String path;
     private String query;
@@ -696,8 +697,8 @@ public class HttpUtil {
       return this;
     }
 
-    public HttpClientWorker host(String ustr) {
-      this.hostname = ustr;
+    public HttpClientWorker address(String[] address) {
+      this.address = address;
       return this;
     }
 
@@ -755,19 +756,40 @@ public class HttpUtil {
       InputStream istream = null;
       Integer state = -1;
       Map<String, List<String>> headerMap = null;
+      String protocol = this.protocol;
+      String host = this.host;
+      int port = this.port;
+      String hostname = null;
+      int hostport = -1;
       try {
         StringBuilder urlStr = new StringBuilder();
-        urlStr.append(this.protocol)
+        if (this.address != null && this.address.length > 0) {
+          Integer addressIndex = null;
+          if ((addressIndex = cast(this.context.get("addressIndex"), addressIndex)) == null) {
+            this.context.put("addressIndex", addressIndex = 0);
+          }
+          // log.debug("CHECK:[{}] = {}", addressIndex, this.address[addressIndex]);
+          String[] data = String.valueOf(this.address[addressIndex]).split(";");
+          host = data[0].trim();
+          if (data.length > 1) { port = parseInt(data[1].trim()); }
+          hostname = this.host;
+          hostport = this.port;
+          this.context.put("addressIndex", (addressIndex + 1) % this.address.length);
+        }
+        urlStr.append(protocol)
           .append("://")
-          .append(this.host)
-          .append(this.port > 0 ? cat(":", this.port) : "")
+          .append(host)
+          .append(port > 0 ? cat(":", port) : "")
           .append(this.path != null && !"".equals(this.path) ? this.path : "")
           .append(this.query != null && !"".equals(this.query) ? cat("?", this.query) : "")
           ;
         log.debug("URL:{}", urlStr);
         boolean hasbody = false;
         Constructor<?> constr = null;
+        /** provider 자동선택 */
         if (this.provider == null || "".equals(this.provider)) { this.provider = HttpClientProviders.APACHE_CLIENT_4_5.name(); }
+        if (HttpClientProviders.APACHE_CLIENT_4_5.name().equals(this.provider) && HttpClient == null) { this.provider = HttpClientProviders.JDK_11.name(); }
+        if (HttpClientProviders.JDK_11.name().equals(this.provider) && JHttpClient == null) { this.provider = HttpClientProviders.URL_CONNECT.name(); }
         if (this.method == null || "".equals(this.method)) { this.method = HttpMethod.GET.name(); }
 
         String ctype = "";
@@ -788,6 +810,7 @@ public class HttpUtil {
         }
 
         SW1: switch (HttpClientProviders.valueOf(this.provider)) {
+        /** JDK 에 기본 탑재된 http-client 사용 */
         case JDK_11: {
           Object client = jClient(this.context, "ALWAYS", null, null, -1);
           Object request = jRequest(this.context, String.valueOf(urlStr), null);
@@ -812,6 +835,7 @@ public class HttpUtil {
           ret = cast(callable.apply(state, istream, headerMap, this.context), ret);
           // log.debug("BODY:{}", ret);
         } break SW1;
+        /** apache http-client 사용 */
         case DEFAULT:
         case APACHE_CLIENT_4_5: 
         default: {
@@ -829,20 +853,7 @@ public class HttpUtil {
           default:      { constr = HttpGetConstr;     hasbody = false; } break SW2;
           }
           if (constr != null) { request = constr.newInstance(String.valueOf(urlStr)); }
-
-          if (this.hostname != null) {
-            // target = httpHost(this.hostname);
-            try {
-              URL url = new URL(this.hostname);
-              String h = url.getHost();
-              String s = url.getProtocol();
-              Integer p = url.getPort();
-              this.headers.put("Host", cat(h, p > 0 ? cat(":", p) : ""));
-            } catch (MalformedURLException e) {
-              log.debug("ERROR:{}", e);
-            }
-          }
-
+          if (hostname != null) { this.headers.put("Host", cat(hostname, hostport > 0 ? cat(":", hostport) : "")); }
           LOOP: for (String name : this.headers.keySet()) {
             Matcher mat;
             if (name == null || "".equals(name)) { continue LOOP; }
