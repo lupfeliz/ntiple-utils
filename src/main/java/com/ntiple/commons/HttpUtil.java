@@ -600,38 +600,54 @@ public class HttpUtil {
     return ret;
   }
 
-  public static HttpClientWorker httpWorker(String url) {
-    HttpClientWorker worker = new HttpClientWorker(url);
-    return worker;
-  }
-
-  public enum HttpClientProviders {
-    APACHE_CLIENT_4_5,
-    JDK_11,
-    URL_CONNECT
-  }
-
-  public enum HttpMethod {
-    DELETE,
-    GET,
-    HEAD,
-    OPTIONS,
-    PATCH,
-    POST,
-    PUT,
-    TRACE
-  }
+  public static HttpClientWorker httpWorker(String url) { return new HttpClientWorker(url); }
+  public static HttpClientWorker httpWorker() { return new HttpClientWorker(); }
 
   public static class HttpClientWorker {
+
+    public enum HttpClientProviders {
+      APACHE_CLIENT_4_5,
+      JDK_11,
+      URL_CONNECT,
+      DEFAULT
+    }
+
+    public enum HttpMethod {
+      DELETE,
+      GET,
+      HEAD,
+      OPTIONS,
+      PATCH,
+      POST,
+      PUT,
+      TRACE
+    }
+
+    public enum ContentType {
+      MULTIPART_FORM_DATA,
+      MULTIPART,
+      TEXT_PLAIN,
+      TEXT,
+      APPLICATION_JSON,
+      JSON,
+      APPLICATION_X_WWW_FORM_URLENCODED,
+      URL_ENCODED,
+      DEFAULT,
+    }
+
+    private final Pattern PTN_CHARSET = Pattern.compile("[ ]*charset[ ]*=[ ]*(?<chset>[a-zA-Z0-9_-]+)", Pattern.CASE_INSENSITIVE);
     private String provider;
     private String protocol;
     private String agent;
     private String host;
+    private String hostname;
     private int port;
     private String path;
     private String query;
     private String version;
     private String method;
+    private String contentType;
+    private String charset;
     private String proxyaddr;
     private int proxyport;
     private Map<String, Object> headers;
@@ -641,6 +657,14 @@ public class HttpUtil {
     public HttpClientWorker() { this(null, new LinkedHashMap<>()); }
     public HttpClientWorker(String ustr) { this(ustr, new LinkedHashMap<>()); }
     public HttpClientWorker(String ustr, Map<String, Object> context) {
+      this.url(ustr);
+      this.agent = "HttpClient";
+      this.charset = UTF8;
+      if (context == null) { context = new LinkedHashMap<>(); }
+      this.context = context; 
+    }
+
+    public HttpClientWorker url(String ustr) {
       if (ustr != null && !"".equals(ustr)) {
         try {
           URL url = null;
@@ -657,13 +681,11 @@ public class HttpUtil {
           this.query = url.getQuery();
         } catch (MalformedURLException ignore) { }
       }
-      this.agent = "HttpClient";
-      if (context == null) { context = new LinkedHashMap<>(); }
-      this.context = context; 
+      return this;
     }
 
-    public HttpClientWorker provider(Fn1a<HttpClientProviders, HttpClientProviders> calable) {
-      HttpClientProviders v = calable.apply(HttpClientProviders.APACHE_CLIENT_4_5);
+    public HttpClientWorker provider(Fn1a<HttpClientProviders, HttpClientProviders> callable) {
+      HttpClientProviders v = callable.apply(HttpClientProviders.DEFAULT);
       String provider = null;
       if (v != null) { provider = v.name(); }
       this.provider = provider;
@@ -674,7 +696,8 @@ public class HttpUtil {
       return this;
     }
 
-    public HttpClientWorker ipAddr(String ipAddr) {
+    public HttpClientWorker host(String ustr) {
+      this.hostname = ustr;
       return this;
     }
 
@@ -688,11 +711,24 @@ public class HttpUtil {
       return this;
     }
 
-    public HttpClientWorker method(Fn1a<HttpMethod, HttpMethod> calable) {
-      HttpMethod v = calable.apply(HttpMethod.GET);
+    public HttpClientWorker method(Fn1a<HttpMethod, HttpMethod> callable) {
+      HttpMethod v = callable.apply(HttpMethod.GET);
       String method = null;
       if (v != null) { method = v.name(); }
       this.method = method;
+      return this;
+    }
+
+    public HttpClientWorker contentType(Fn1a<ContentType, ContentType> callable) {
+      ContentType v = callable.apply(ContentType.URL_ENCODED);
+      String ctype = null;
+      if (v != null) { ctype = v.name(); }
+      this.contentType = ctype;
+      return this;
+    }
+
+    public HttpClientWorker charset(String charset) {
+      this.charset = charset;
       return this;
     }
 
@@ -733,6 +769,24 @@ public class HttpUtil {
         Constructor<?> constr = null;
         if (this.provider == null || "".equals(this.provider)) { this.provider = HttpClientProviders.APACHE_CLIENT_4_5.name(); }
         if (this.method == null || "".equals(this.method)) { this.method = HttpMethod.GET.name(); }
+
+        String ctype = "";
+        String chset = this.charset;
+        if (this.headers == null) { this.headers = newMap(); }
+        if (this.agent != null && !"".equals(this.agent)) { this.headers.put("User-Agent", this.agent); }
+        if (this.contentType != null && !"".equals(this.contentType)) {
+          SW: switch (ContentType.valueOf(contentType)) {
+          case MULTIPART_FORM_DATA: case MULTIPART: ctype = "multipart/form-data"; break SW;
+          case TEXT_PLAIN: case TEXT: ctype = "text/plain"; break SW;
+          case APPLICATION_JSON: case JSON: ctype = "application/json"; break SW;
+          case APPLICATION_X_WWW_FORM_URLENCODED: case URL_ENCODED: case DEFAULT: default: ctype = "application/x-www-form-urlencoded"; break SW;
+          }
+        }
+
+        if (ctype != null && !"".equals(ctype)) {
+          this.headers.put("Content-Type", cat(ctype, chset != null && !"".equals(chset) ? cat(";charset=", chset) : ""));
+        }
+
         SW1: switch (HttpClientProviders.valueOf(this.provider)) {
         case JDK_11: {
           Object client = jClient(this.context, "ALWAYS", null, null, -1);
@@ -758,9 +812,11 @@ public class HttpUtil {
           ret = cast(callable.apply(state, istream, headerMap, this.context), ret);
           // log.debug("BODY:{}", ret);
         } break SW1;
+        case DEFAULT:
         case APACHE_CLIENT_4_5: 
         default: {
           Object request = null;
+          Object target = null;
           SW2: switch (HttpMethod.valueOf(this.method)) {
           case POST:    { constr = HttpPostConstr;    hasbody = true;  } break SW2;
           case DELETE:  { constr = HttpDeleteConstr;  hasbody = false; } break SW2;
@@ -772,14 +828,23 @@ public class HttpUtil {
           case GET:
           default:      { constr = HttpGetConstr;     hasbody = false; } break SW2;
           }
-          String ctype = "";
-          String chset = UTF8;
-          if (constr != null) {
-            request = constr.newInstance(String.valueOf(urlStr));
+          if (constr != null) { request = constr.newInstance(String.valueOf(urlStr)); }
+
+          if (this.hostname != null) {
+            // target = httpHost(this.hostname);
+            try {
+              URL url = new URL(this.hostname);
+              String h = url.getHost();
+              String s = url.getProtocol();
+              Integer p = url.getPort();
+              this.headers.put("Host", cat(h, p > 0 ? cat(":", p) : ""));
+            } catch (MalformedURLException e) {
+              log.debug("ERROR:{}", e);
+            }
           }
-          final Pattern PTN_CHARSET = Pattern.compile("[ ]*charset[ ]*=[ ]*(?<chset>[a-zA-Z0-9_-]+)", Pattern.CASE_INSENSITIVE);
-          Matcher mat;
+
           LOOP: for (String name : this.headers.keySet()) {
+            Matcher mat;
             if (name == null || "".equals(name)) { continue LOOP; }
             String value = cast(this.headers.get(name), "");
             HttpMessageSetHeader.invoke(request, name, value);
@@ -819,8 +884,9 @@ public class HttpUtil {
           }
           Object client = context.get(HttpClient.getName());
           if (client == null) { context.put(HttpClient.getName(), client = httpClient()); }
-          Object result = execute(client, null, request, null, Object.class);
+          Object result = execute(client, target, request, null, Object.class);
           Object entity = ResponseGetEntity.invoke(result, EMPTY_OBJ);
+          // Header[] headers = result.getAllHeaders() / getName, getValue
           istream = cast(HttpEntityGetContent.invoke(entity, EMPTY_OBJ), InputStream.class);
           if (headerMap == null) { headerMap = cast(newMap(), headerMap = null); }
           ret = cast(callable.apply(state, istream, headerMap, this.context), ret);

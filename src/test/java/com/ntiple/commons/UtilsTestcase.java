@@ -59,14 +59,23 @@ public class UtilsTestcase {
     SimpleLogger log = SimpleLogger.getLogger();
     log.setLevel(1);
     StringBuilder content = new StringBuilder();
-    httpWorker("https://devlog.ntiple.com/devwas9998/study202403/api/atc/atc01001")
+    // httpWorker("https://devlog.ntiple.com/devwas9998/study202403/api/atc/atc01001")
     // httpWorker("http://devsup.ntiple.com:10002/smp/smp01001p01")
+    // httpWorker("https://devlog.ntiple.com")
+    // httpWorker("https://wptest.ntiple.com")
+    httpWorker()
+      .url("https://203.245.30.232")
+      // .host("https://devlog.ntiple.com")
+      .host("https://wptest.ntiple.com")
       .provider(p -> p.APACHE_CLIENT_4_5)
-      .method(p -> p.POST)
-      .headers(convert(new Object[][] {
-        { "Content-Type", "application/json; charset=UTF-8" },
-        // { "Content-Type", "application/x-www-form-urlencoded; charset=UTF-8" },
-      }, newMap()))
+      .method(p -> p.GET)
+      // .method(p -> p.POST)
+      // .contentType(p -> p.JSON)
+      .contentType(p -> p.URL_ENCODED)
+      // .headers(convert(new Object[][] {
+      //   { "Host", "devlog.ntiple.com" }
+      // }, newMap()))
+      .agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0")
       .contents(convert(new Object[][] {
         { "searchType", "" },
         { "rowStart", 0 },
