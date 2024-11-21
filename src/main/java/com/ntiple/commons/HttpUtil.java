@@ -728,6 +728,8 @@ public class HttpUtil {
         log.debug("URL:{}", urlStr);
         boolean hasbody = false;
         Constructor<?> constr = null;
+        if (this.provider == null || "".equals(this.provider)) { this.provider = HttpClientProviders.APACHE_CLIENT_4_5.name(); }
+        if (this.method == null || "".equals(this.method)) { this.method = HttpMethod.GET.name(); }
         switch (HttpClientProviders.valueOf(this.provider)) {
         case JDK_11: {
           Object client = jClient(this.context, "ALWAYS", null, null, -1);
@@ -757,38 +759,15 @@ public class HttpUtil {
         default: {
           Object request = null;
           switch (HttpMethod.valueOf(this.method)) {
-          case POST:
-            constr = HttpPostConstr;
-            hasbody = true;
-            break;
-          case DELETE:
-            constr = HttpDeleteConstr;
-            hasbody = false;
-            break;
-          case PUT: 
-            constr = HttpPutConstr;
-            hasbody = true;
-            break;
-          case HEAD:
-            constr = HttpHeadConstr;
-            hasbody = false;
-            break;
-          case OPTIONS: 
-            constr = HttpOptionsConstr;
-            hasbody = false;
-            break;
-          case PATCH:
-            constr = HttpPatchConstr;
-            hasbody = true;
-            break;
-          case TRACE:
-            constr = HttpTraceConstr;
-            hasbody = false;
-            break;
-          case GET: default: 
-            constr = HttpGetConstr;
-            hasbody = false;
-            break;
+          case POST:    { constr = HttpPostConstr;    hasbody = true;  } break;
+          case DELETE:  { constr = HttpDeleteConstr;  hasbody = false; } break;
+          case PUT:     { constr = HttpPutConstr;     hasbody = true;  } break;
+          case HEAD:    { constr = HttpHeadConstr;    hasbody = false; } break;
+          case OPTIONS: { constr = HttpOptionsConstr; hasbody = false; } break;
+          case PATCH:   { constr = HttpPatchConstr;   hasbody = true;  } break;
+          case TRACE:   { constr = HttpTraceConstr;   hasbody = false; } break;
+          case GET:
+          default:      { constr = HttpGetConstr;     hasbody = false; } break;
           }
           if (constr != null) {
             request = constr.newInstance(String.valueOf(urlStr));

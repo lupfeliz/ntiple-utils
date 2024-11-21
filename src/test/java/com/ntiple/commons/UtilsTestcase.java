@@ -66,7 +66,7 @@ public class UtilsTestcase {
       .provider(p -> p.APACHE_CLIENT_4_5)
       .method(p -> p.POST)
       .headers(convert(new Object[][] {
-        { "Content-Type", "application/json" },
+        { "Content-Type", "application/json; charset=UTF-8" },
       }, newMap()))
       .contents(convert(new Object[][] {
         { "searchType", "" },
