@@ -222,23 +222,24 @@ public class WebUtil {
   //   public void test() throws Exception {
   //     this.getReader();
   //   }
-  //   public static String cleanXSS(String value) {
-  //     String ret = value;
-  //     log.trace("VALUE:{}", value);
-  //     try {
-  //       ret = ret.replaceAll("\\(", "&#40;").replaceAll("\\)", "&#41;");
-  //       ret = ret.replaceAll("'", "&#39;");
-  //       ret = ret.replaceAll("eval\\((.*)\\)", "");
-  //       ret = ret.replaceAll("[\\\"\\\'][\\s]*javascript:(.*)[\\\"\\\']", "\"\"");
-  //       ret = ret.replaceAll("<script", "&lt;script");
-  //       ret = ret.replaceAll("</script", "&lt;/script");
-  //       ret = ret.replaceAll("<([^>]+)on[a-zA-Z]+[=]", "<$1");
-  //     } catch (Exception e) {
-  //       log.debug("E:{}", e);
-  //     }
-  //     return ret;
-  //   }
   // }
+
+  public static String cleanXSS(String value) {
+    String ret = value;
+    log.trace("VALUE:{}", value);
+    try {
+      ret = ret.replaceAll("\\(", "&#40;").replaceAll("\\)", "&#41;");
+      ret = ret.replaceAll("'", "&#39;");
+      ret = ret.replaceAll("eval\\((.*)\\)", "");
+      ret = ret.replaceAll("[\\\"\\\'][\\s]*javascript:(.*)[\\\"\\\']", "\"\"");
+      ret = ret.replaceAll("<script", "&lt;script");
+      ret = ret.replaceAll("</script", "&lt;/script");
+      ret = ret.replaceAll("<([^>]+)on[a-zA-Z]+[=]", "<$1");
+    } catch (Exception e) {
+      log.debug("E:{}", e);
+    }
+    return ret;
+  }
 
   public static boolean checkIpMatch(String ipAddr, String filter) {
     boolean ret = false;
