@@ -104,6 +104,10 @@ public class HttpUtil {
   private static Method HttpClientExecute2 = null;
   private static Method HttpMessageSetHeader = null;
   private static Method HttpRequestSetEntity = null;
+  private static Method MultipartEntityBuilderCreate = null;
+  private static Method MultipartEntityBuilderAddBinaryBody = null;
+  private static Method MultipartEntityBuilderAddTextBody = null;
+  private static Method MultipartEntityBuilderBuild = null;
 
   private static Class<?> LaxRedirectStrategy = null;
   private static Class<?> BasicCookieStore = null;
@@ -499,6 +503,46 @@ public class HttpUtil {
     return ret;
   }
 
+  /**
+   * URL 중 scheme 부분을 제외한 URI 부분의 double slash 를 삭제한다.
+   * 예 :
+   * http://localhost:8080/api///main =>
+   * http://localhost:8080/api/main
+   * ※ http* 이외의 scheme 은 무시
+   */
+  public static String cleanURL(String url) {
+    final String SCHEME_HTTP = cat(S_HTTP, "://");
+    final String SCHEME_HTTPS = cat(S_HTTPS, "://");
+    if (url == null) { return url; }
+    if (url.startsWith(SCHEME_HTTP)) {
+      url = url.substring(SCHEME_HTTP.length());
+      url = url.replaceAll("[/]+", "/");
+      url = SCHEME_HTTP + url;
+    } else if (url.startsWith(SCHEME_HTTPS)) {
+      url = url.substring(SCHEME_HTTPS.length());
+      url = url.replaceAll("[/]+", "/");
+      url = SCHEME_HTTPS + url;
+    } else {
+      url = url.replaceAll("[/]+", "/");
+    }
+    return url;
+  }
+  
+  public static Map<String, String> queryStringToMap(String query) {
+    Map<String, String> ret = new LinkedHashMap<String, String>();
+    for (String param : query.split("&")) {
+      String pair[] = param.split("=");
+      if (pair.length > 1) {
+        String key = param.substring(0, param.indexOf("="));
+        String val = param.substring(param.indexOf("=") + 1, param.length());
+        ret.put(key, val);
+      } else {
+        ret.put(pair[0], "");
+      }
+    }
+    return ret;
+  }
+
   private static Object jClient(Map<String, Object> context, String follow, String ver, String paddr, int pport) {
     Object ret = null;
     Object builder = null;
@@ -836,6 +880,9 @@ public class HttpUtil {
           // log.debug("BODY:{}", ret);
         } break SW1;
         /** apache http-client 사용 */
+        case URL_CONNECT: {
+          /** TODO: URL-CONNECTION 구분 */
+        } break SW1;
         case DEFAULT:
         case APACHE_CLIENT_4_5: 
         default: {
