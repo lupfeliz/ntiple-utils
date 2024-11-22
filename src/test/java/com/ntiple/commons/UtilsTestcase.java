@@ -25,15 +25,11 @@ import java.io.OutputStream;
 import java.io.Writer;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.ntiple.commons.FunctionUtil.Fn2a;
-import com.ntiple.commons.HttpUtil.HttpClientWorker;
 import com.ntiple.commons.TestUtil.TestLevel;
 
-@SuppressWarnings("all")
 public class UtilsTestcase {
   @Test public void testSimple() throws Exception {
     assertTrue(true);
@@ -45,8 +41,8 @@ public class UtilsTestcase {
     SimpleLogger log = SimpleLogger.getLogger();
     // String content = cast(httpWorker("https://gitlab.ntiple.com")
     String content = cast(httpWorker("https://www.naver.com")
-      .provider(p -> p.JDK_11)
-      .method(p -> p.GET)
+      .provider(p -> p.JDK_11())
+      .method(p -> p.GET())
       .work((state, istream, headers, context) -> {
         log.setLevel(1);
         Object ret = null;
@@ -74,10 +70,10 @@ public class UtilsTestcase {
       // .url("https://wptest.ntiple.com")
       .address(new String[] { "203.245.30.232" })
       // .provider(p -> p.APACHE_CLIENT_4_5)
-      .method(p -> p.GET)
-      // .method(p -> p.POST)
-      // .contentType(p -> p.JSON)
-      .contentType(p -> p.URL_ENCODED)
+      .method(p -> p.GET())
+      // .method(p -> p.POST())
+      // .contentType(p -> p.JSON())
+      .contentType(p -> p.URL_ENCODED())
       // .headers(convert(new Object[][] {
       //   { "Host", "devlog.ntiple.com" }
       // }, newMap()))
@@ -105,8 +101,8 @@ public class UtilsTestcase {
     httpWorker()
       .url("http://devsup.ntiple.com:10002/smp/smp01001p01")
       // .url("http://localhost:8080/smp/smp01001p01")
-      .method(p -> p.POST)
-      .contentType(p -> p.MULTIPART)
+      .method(p -> p.POST())
+      .contentType(p -> p.MULTIPART())
       .contents(convert(new Object[][] {
         { "text", "한글" },
         { "file", new File("./README.md") },
@@ -132,7 +128,6 @@ public class UtilsTestcase {
     OutputStream ostream = null;
     BufferedReader reader = null;
     Writer writer = null;
-
     while(true) {
       try {
         sock = ss.accept();
@@ -154,5 +149,6 @@ public class UtilsTestcase {
         safeclose(sock);
       }
     }
+    safeclose(ss);
   }
 }

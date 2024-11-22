@@ -667,7 +667,11 @@ public class HttpUtil {
       APACHE_CLIENT_4_5,
       JDK_11,
       URL_CONNECT,
-      DEFAULT
+      DEFAULT;
+      public HttpClientProviders APACHE_CLIENT_4_5() { return APACHE_CLIENT_4_5; }
+      public HttpClientProviders JDK_11() { return JDK_11; }
+      public HttpClientProviders URL_CONNECT() { return URL_CONNECT; }
+      public HttpClientProviders DEFAULT() { return DEFAULT; }
     }
 
     public enum HttpMethod {
@@ -678,19 +682,45 @@ public class HttpUtil {
       PATCH,
       POST,
       PUT,
-      TRACE
+      TRACE;
+      public HttpMethod DELETE() { return DELETE; }
+      public HttpMethod GET() { return GET; }
+      public HttpMethod HEAD() { return HEAD; }
+      public HttpMethod OPTIONS() { return OPTIONS; }
+      public HttpMethod PATCH() { return PATCH; }
+      public HttpMethod POST() { return POST; }
+      public HttpMethod PUT() { return PUT; }
+      public HttpMethod TRACE() { return TRACE; }
     }
 
+    public static final String S_MULTIPART_FORM_DATA = "multipart/form-data";
+    public static final String S_TEXT_PLAIN = "text/plain";
+    public static final String S_APPLICATION_JSON = "application/json";
+    public static final String S_APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
+
     public enum ContentType {
-      MULTIPART_FORM_DATA,
-      MULTIPART,
-      TEXT_PLAIN,
-      TEXT,
-      APPLICATION_JSON,
-      JSON,
-      APPLICATION_X_WWW_FORM_URLENCODED,
-      URL_ENCODED,
-      DEFAULT,
+      MULTIPART_FORM_DATA(S_MULTIPART_FORM_DATA),
+      MULTIPART(S_MULTIPART_FORM_DATA),
+      TEXT_PLAIN(S_TEXT_PLAIN),
+      TEXT(S_TEXT_PLAIN),
+      APPLICATION_JSON(S_APPLICATION_JSON),
+      JSON(S_APPLICATION_JSON),
+      APPLICATION_X_WWW_FORM_URLENCODED(S_APPLICATION_X_WWW_FORM_URLENCODED),
+      URL_ENCODED(S_APPLICATION_X_WWW_FORM_URLENCODED),
+      DEFAULT(S_APPLICATION_X_WWW_FORM_URLENCODED);
+      private String value;
+      ContentType(String value) { this.value = value; }
+      public String getValue() { return this.value; }
+
+      public ContentType MULTIPART_FORM_DATA() { return MULTIPART_FORM_DATA; }
+      public ContentType MULTIPART() { return MULTIPART; }
+      public ContentType TEXT_PLAIN() { return TEXT_PLAIN; }
+      public ContentType TEXT() { return TEXT; }
+      public ContentType APPLICATION_JSON() { return APPLICATION_JSON; }
+      public ContentType JSON() { return JSON; }
+      public ContentType APPLICATION_X_WWW_FORM_URLENCODED() { return APPLICATION_X_WWW_FORM_URLENCODED; }
+      public ContentType URL_ENCODED() { return URL_ENCODED; }
+      public ContentType DEFAULT() { return DEFAULT; }
     }
 
     private final Pattern PTN_CHARSET = Pattern.compile("[ ]*charset[ ]*=[ ]*(?<chset>[a-zA-Z0-9_-]+)", Pattern.CASE_INSENSITIVE);
@@ -848,17 +878,17 @@ public class HttpUtil {
         if (HttpClientProviders.APACHE_CLIENT_4_5.name().equals(this.provider) && HttpClient == null) { this.provider = HttpClientProviders.JDK_11.name(); }
         if (HttpClientProviders.JDK_11.name().equals(this.provider) && JHttpClient == null) { this.provider = HttpClientProviders.URL_CONNECT.name(); }
         if (this.method == null || "".equals(this.method)) { this.method = HttpMethod.GET.name(); }
-
+        ContentType ct;
         String ctype = "";
         String chset = this.charset;
         if (this.headers == null) { this.headers = newMap(); }
         if (this.agent != null && !"".equals(this.agent)) { this.headers.put("User-Agent", this.agent); }
         if (this.contentType != null && !"".equals(this.contentType)) {
-          SW: switch (ContentType.valueOf(contentType)) {
-          case MULTIPART_FORM_DATA: case MULTIPART: ctype = "multipart/form-data"; break SW;
-          case TEXT_PLAIN: case TEXT: ctype = "text/plain"; break SW;
-          case APPLICATION_JSON: case JSON: ctype = "application/json"; break SW;
-          case APPLICATION_X_WWW_FORM_URLENCODED: case URL_ENCODED: case DEFAULT: default: ctype = "application/x-www-form-urlencoded"; break SW;
+          SW: switch (ct = ContentType.valueOf(contentType)) {
+          case MULTIPART_FORM_DATA: case MULTIPART: ctype = ct.value; break SW;
+          case TEXT_PLAIN: case TEXT: ctype = ct.value; break SW;
+          case APPLICATION_JSON: case JSON: ctype = ct.value; break SW;
+          case APPLICATION_X_WWW_FORM_URLENCODED: case URL_ENCODED: case DEFAULT: default: ctype = ct.value; break SW;
           }
         }
 
@@ -866,7 +896,7 @@ public class HttpUtil {
          * multipart 시 boundary 를 아래와 같이 헤더에 지정해 주어야 하므로 생략한다. (httpclient 에서 자동지정)
          * Content-Type: multipart/form-data; boundary=B0I_RCOhwk4g91PaSWzV_Vhk1_DbB4
          **/
-        if (ctype != null && !"".equals(ctype) && !"multipart/form-data".equals(ctype)) {
+        if (ctype != null && !"".equals(ctype) && !ContentType.MULTIPART.value.equals(ctype)) {
           this.headers.put("Content-Type", cat(ctype, chset != null && !"".equals(chset) ? cat(";charset=", chset) : ""));
         }
 
@@ -936,10 +966,10 @@ public class HttpUtil {
           if (hasbody) {
             Object entity = null;
             SW3: switch (ctype) {
-            case "multipart/form-data": {
+            case S_MULTIPART_FORM_DATA: {
               Object builder = MultipartEntityBuilderCreate.invoke(null, EMPTY_OBJ);
               Map<String, Object> map = convert(this.contents, newMap());
-              Object ttype = ContentTypeCreate.invoke(null, "text/plain", chset);
+              Object ttype = ContentTypeCreate.invoke(null, S_TEXT_PLAIN, chset);
               for (String key : map.keySet()) {
                 Object val = map.get(key);
                 if (val instanceof File) {
@@ -954,13 +984,13 @@ public class HttpUtil {
               }
               entity = MultipartEntityBuilderBuild.invoke(builder, EMPTY_OBJ);
             } break SW3;
-            case "text/plain": {
+            case S_TEXT_PLAIN: {
               entity = StringEntityConstr.newInstance(String.valueOf(this.contents != null ? this.contents : ""), chset);
             } break SW3;
-            case "application/json": {
+            case S_APPLICATION_JSON: {
               entity = StringEntityConstr.newInstance(convert(this.contents, ""), chset);
             } break SW3;
-            case "application/x-www-form-urlencoded":
+            case S_APPLICATION_X_WWW_FORM_URLENCODED:
             default: {
               Map<String, Object> map = convert(this.contents, newMap());
               List<Object> list = new ArrayList<>();
