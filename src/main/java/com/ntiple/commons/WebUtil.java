@@ -2,21 +2,24 @@
  * @File        : WebUtil.java
  * @Author      : 정재백
  * @Since       : 2023-11-22
- * @Description : 각종 데이터 관련 유틸
+ * @Description : 웹유틸
  * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;
 
-import static com.ntiple.commons.Constants.UTF8;
+import static com.ntiple.commons.Constants.REFERER;
+import static com.ntiple.commons.Constants.X_FORWARDED_FOR;
+import static com.ntiple.commons.ConvertUtil.array;
 import static com.ntiple.commons.ConvertUtil.asList;
+import static com.ntiple.commons.ConvertUtil.convert;
 import static com.ntiple.commons.ConvertUtil.parseInt;
-import static com.ntiple.commons.IOUtils.passthrough;
-import static com.ntiple.commons.IOUtils.safeclose;
+import static com.ntiple.commons.ReflectionUtil.EMPTY_CLS;
+import static com.ntiple.commons.ReflectionUtil.EMPTY_OBJ;
 import static com.ntiple.commons.ReflectionUtil.cast;
+import static com.ntiple.commons.ReflectionUtil.findClass;
+import static com.ntiple.commons.ReflectionUtil.findMethod;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,47 +27,114 @@ import java.util.Map;
 public class WebUtil {
 
   private static final SimpleLogger log = SimpleLogger.getLogger();
-
   public static final String PTN_SCHEM_HTTP = "^http[s]{0,1}[:][/][/]";
+
+  private static Class<?> ServletRequest = null;
+  private static Class<?> HttpServletRequest = null;
+  private static Class<?> HttpServletResponse = null;
+  private static Class<?> RequestContextHolder = null;
+  private static Class<?> ServletRequestAttributes = null;
+
+  private static Method ServletRequestGetAttribute = null;
+  private static Method HttpServletRequestGetHeader = null;
+  private static Method HttpServletRequestGetRemoteAddr = null;
+  private static Method HttpServletRequestGetParameterMap = null;
+
+  private static Method RequestContextHolderGetRequestAttributes = null;
+  private static Method ServletRequestAttributesGetRequest = null;
+
+
+  static {
+    int logLevel = log.getLevel();
+    log.setLevel(4);
+    if (HttpServletRequest == null) {
+    /** for javax.servlet package (JDK 1.8 ver)  */
+      try {
+        ServletRequest = findClass("javax.servlet.ServletRequest");
+        HttpServletRequest = findClass("javax.servlet.http.HttpServletRequest");
+        HttpServletResponse = findClass("javax.servlet.http.HttpServletResponse");
+        ServletRequestGetAttribute = findMethod(ServletRequest, "getAttribute", array(String.class));
+        HttpServletRequestGetHeader = findMethod(HttpServletRequest, "getHeader", array(String.class));
+        HttpServletRequestGetRemoteAddr = findMethod(HttpServletRequest, "getRemoteAddr", EMPTY_CLS);
+        HttpServletRequestGetParameterMap = findMethod(HttpServletRequest, "getParameterMap", EMPTY_CLS);
+        RequestContextHolder = findClass("org.springframework.web.context.request.RequestContextHolder");
+        ServletRequestAttributes = findClass("org.springframework.web.context.request.ServletRequestAttributes");
+      } catch (Throwable ignore) { log.debug("E:{}", ignore); }
+    }
+    /** for jakarta package (over JDK 1.8 ver)  */
+    if (HttpServletRequest == null) {
+      try {
+        ServletRequest = findClass("jakarta.servlet.ServletRequest");
+        HttpServletRequest = findClass("jakarta.servlet.http.HttpServletRequest");
+        HttpServletResponse = findClass("jakarta.servlet.http.HttpServletResponse ");
+        ServletRequestGetAttribute = findMethod(ServletRequest, "getAttribute", array(String.class));
+        HttpServletRequestGetHeader = findMethod(HttpServletRequest, "getHeader", array(String.class));
+        HttpServletRequestGetRemoteAddr = findMethod(HttpServletRequest, "getRemoteAddr", EMPTY_CLS);
+        HttpServletRequestGetParameterMap = findMethod(HttpServletRequest, "getParameterMap", EMPTY_CLS);
+        RequestContextHolder = findClass("org.springframework.web.context.request.RequestContextHolder");
+        ServletRequestAttributes = findClass("org.springframework.web.context.request.ServletRequestAttributes");
+      } catch (Throwable ignore) { log.debug("E:{}", ignore); }
+    }
+    if (RequestContextHolder != null) {
+      try {
+        RequestContextHolderGetRequestAttributes = findMethod(RequestContextHolder, "getRequestAttributes", EMPTY_CLS);
+        ServletRequestAttributesGetRequest = findMethod(ServletRequestAttributes, "getRequest", EMPTY_CLS);
+      } catch (Throwable ignore) { log.debug("E:{}", ignore); }
+    }
+    try {
+    } catch (Throwable ignore) { log.debug("E:{}", ignore); }
+    log.setLevel(logLevel);
+  }
   
-  // public static HttpServletRequest curRequest() {
-  //   return (cast(RequestContextHolder.getRequestAttributes(), ServletRequestAttributes.class))
-  //     .getRequest();
-  // }
+  public static <T> T curRequest(Class<T> cls) { return cast(curRequest(), cls); }
+  public static Object curRequest() {
+    Object ret = null;
+    if (RequestContextHolder == null) { return ret; }
+    try {
+      Object attr = RequestContextHolderGetRequestAttributes.invoke(null, EMPTY_OBJ);
+      ret = ServletRequestAttributesGetRequest.invoke(attr, EMPTY_OBJ);
+    } catch (Exception ignore) { log.debug("E:{}", ignore); }
+    return ret;
+  }
 
-  // public static HttpServletResponse curResponse() { return curResponse(curRequest()); }
-  // public static HttpServletResponse curResponse(HttpServletRequest request) {
-  //   if (request != null) {
-  //     try {
-  //       Object obj = request.getAttribute(HttpServletResponse.class.getName());
-  //       if (obj != null) {
-  //         if (obj instanceof HttpServletResponse) {
-  //           return cast(obj, HttpServletResponse.class);
-  //         }
-  //       }
-  //     } catch (Exception ignore) { log.trace("E:{}", ignore); }
-  //   }
-  //   return null;
-  // }
+  public static <T> T curResponse(Class<T> cls) { return curResponse(curRequest(), cls); }
+  public static <T> T curResponse(Object req, Class<T> cls) { return cast(curResponse(req), cls); }
+  public static Object curResponse(Object request) {
+    if (request != null && HttpServletRequest != null && HttpServletRequest != null) {
+      try {
+        Object obj = ServletRequestGetAttribute.invoke(request, HttpServletResponse.getName());
+        if (obj != null && HttpServletResponse.isAssignableFrom(obj.getClass())) {
+          return obj;
+        }
+      } catch (Exception ignore) { log.debug("E:{}", ignore); }
+    }
+    return null;
+  }
 
-  // public static String remoteAddr() { return remoteAddr(curRequest()); }
-  // public static String remoteAddr(HttpServletRequest req) {
-  //   String ret = null;
-  //   ret = req.getHeader(X_FORWARDED_FOR);
-  //   if (ret == null) { ret = req.getHeader("Proxy-Client-IP"); }
-  //   if (ret == null) { ret = req.getHeader("WL-Proxy-Client-IP"); }
-  //   if (ret == null) { ret = req.getHeader("HTTP_CLIENT_IP"); }
-  //   if (ret == null) { ret = req.getHeader("HTTP_X_FORWARDED_FOR"); }
-  //   if (ret == null) { ret = req.getRemoteAddr(); }
-  //   return ret;
-  // }
+  public static String remoteAddr() { return remoteAddr(curRequest()); }
+  public static String remoteAddr(Object req) {
+    Object ret = null;
+    if (req == null || HttpServletRequestGetHeader == null) { return cast(ret, ""); }
+    try {
+      ret = HttpServletRequestGetHeader.invoke(req, X_FORWARDED_FOR);
+      if (ret == null) { ret = HttpServletRequestGetHeader.invoke(req, "Proxy-Client-IP"); }
+      if (ret == null) { ret = HttpServletRequestGetHeader.invoke(req, "WL-Proxy-Client-IP"); }
+      if (ret == null) { ret = HttpServletRequestGetHeader.invoke(req, "HTTP_CLIENT_IP"); }
+      if (ret == null) { ret = HttpServletRequestGetHeader.invoke(req, "HTTP_X_FORWARDED_FOR"); }
+      if (ret == null) { ret = HttpServletRequestGetRemoteAddr.invoke(req, EMPTY_OBJ); }
+    } catch (Exception ignore) { }
+    return cast(ret, "");
+  }
 
-  // public static String referer() { return referer(curRequest()); }
-  // public static String referer(HttpServletRequest req) {
-  //   String ret = null;
-  //   ret = req.getHeader(REFERER);
-  //   return ret;
-  // }
+  public static String referer() { return referer(curRequest()); }
+  public static String referer(Object req) {
+    Object ret = null;
+    if (req == null || HttpServletRequestGetHeader == null) { return cast(ret, ""); }
+    try {
+      ret = HttpServletRequestGetHeader.invoke(req, REFERER);
+    } catch (Exception ignore) { }
+    return cast(ret, "");
+  }
 
   public static String getUri(String urlStr, List<String> hostNames) {
     String ret = "";
@@ -206,9 +276,11 @@ public class WebUtil {
   public static class RequestParameter {
     private Map<String, String[]> pmap;
 
-    // public RequestParameter(HttpServletRequest request) {
-    //   pmap = request.getParameterMap();
-    // }
+    public RequestParameter(Object req) {
+      try {
+        pmap = cast(HttpServletRequestGetParameterMap.invoke(req, EMPTY_OBJ), pmap = null);
+      } catch (Exception e) { throw new RuntimeException(e); }
+    }
 
     public String get(String name) { return get(name, String.class, 0); }
     public String get(String name, Integer seq) { return get(name, String.class, seq); }
@@ -247,25 +319,12 @@ public class WebUtil {
       return new ArrayList<String>(pmap.keySet());
     }
 
-    // public JSONObject toJSON() {
-    //   JSONObject ret = new JSONObject();
-    //   for (String key : this.pmap.keySet()) {
-    //     String[] v = this.pmap.get(key);
-    //     JSONArray l = new JSONArray();
-    //     if (v != null) {
-    //       for (int inx = 0; inx < v.length; inx++) { l.put(v[inx]); }
-    //     }
-    //     ret.put(key, l);
-    //   }
-    //   return ret;
-    // }
-
     public Map<String, String[]> toMap() {
       return this.pmap;
     }
 
-    // @Override public String toString() {
-    //   return String.valueOf(toJSON());
-    // }
+    @Override public String toString() {
+      return  convert(this.pmap, "");
+    }
   }
 }

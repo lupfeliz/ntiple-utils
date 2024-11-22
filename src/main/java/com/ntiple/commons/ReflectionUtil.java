@@ -2,7 +2,7 @@
  * @File        : ReflectionUtil.java
  * @Author      : 정재백
  * @Since       : 2024-11-20
- * @Description : 테스트
+ * @Description : Reflection 에 자주 사용되는 메소드 모음
  * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;

@@ -2,7 +2,7 @@
  * @File        : MetaIOUtils.java
  * @Author      : 정재백
  * @Since       : 2024-05-26
- * @Description : 입출력 유틸
+ * @Description : 원격파일 인터페이스
  * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;

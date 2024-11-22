@@ -2,7 +2,7 @@
  * @File        : StringUtil.java
  * @Author      : 정재백
  * @Since       : 2024-11-20
- * @Description : 테스트
+ * @Description : 문자열 재조합 유틸
  * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;

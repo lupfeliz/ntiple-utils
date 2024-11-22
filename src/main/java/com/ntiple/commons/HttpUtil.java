@@ -2,7 +2,7 @@
  * @File        : HttpUtil.java
  * @Author      : 정재백
  * @Since       : 2024-03-20
- * @Description : 테스트
+ * @Description : 다양한 HttpClient 를 다룰 수 있도록 해 주는 유틸
  * @Site        : https://devlog.ntiple.com
  **/
 package com.ntiple.commons;
