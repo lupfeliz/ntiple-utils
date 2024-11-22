@@ -14,11 +14,17 @@ import static com.ntiple.commons.HttpUtil.httpWorker;
 import static com.ntiple.commons.IOUtils.readAsString;
 import static com.ntiple.commons.IOUtils.reader;
 import static com.ntiple.commons.IOUtils.safeclose;
+import static com.ntiple.commons.IOUtils.writer;
 import static com.ntiple.commons.ReflectionUtil.cast;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -89,5 +95,64 @@ public class UtilsTestcase {
         return content;
       });
     log.debug("CONTENT:{}", content);
+  }
+
+  @Test public void testUpload() throws Exception {
+    if (!TestUtil.isEnabled("testUpload", TestLevel.MANUAL)) { return; }
+    SimpleLogger log = SimpleLogger.getLogger();
+    log.setLevel(1);
+    final StringBuilder sb = new StringBuilder();
+    httpWorker()
+      .url("http://devsup.ntiple.com:10002/smp/smp01001p01")
+      // .url("http://localhost:8080/smp/smp01001p01")
+      .method(p -> p.POST)
+      .contentType(p -> p.MULTIPART)
+      .contents(convert(new Object[][] {
+        { "text", "한글" },
+        { "file", new File("./README.md") },
+      }, newMap()))
+      .work((state, istream, headers, context) -> {
+        Object ret = null;
+        try {
+          sb.append(readAsString(istream, UTF8));
+        } catch (Exception e) { log.debug("E:{}", e); }
+        log.debug("HEADERS:{}", headers);
+        return ret;
+      });
+    log.debug("CONTENT:{}", sb);
+  }
+
+  @Test public void testSocketDump() throws Exception {
+    if (!TestUtil.isEnabled("testSocketDump", TestLevel.MANUAL)) { return; }
+    SimpleLogger log = SimpleLogger.getLogger();
+    log.setLevel(1);
+    ServerSocket ss = new ServerSocket(8080);
+    Socket sock = null;
+    InputStream istream = null;
+    OutputStream ostream = null;
+    BufferedReader reader = null;
+    Writer writer = null;
+
+    while(true) {
+      try {
+        sock = ss.accept();
+        istream = sock.getInputStream();
+        reader = reader(istream, UTF8);
+        log.debug("READER-CREATED!!!");
+        ostream = sock.getOutputStream();
+        writer = writer(ostream, UTF8);
+        log.debug("WRITER-CREATED!!!");
+        for (String rl; (rl = reader.readLine()) != null;) {
+          log.debug("LINE:{}", rl);
+        }
+        break;
+      } finally {
+        safeclose(reader);
+        safeclose(writer);
+        safeclose(istream);
+        safeclose(ostream);
+        safeclose(sock);
+      }
+    }
   }
 }

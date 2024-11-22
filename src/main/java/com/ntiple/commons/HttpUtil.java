@@ -860,7 +860,11 @@ public class HttpUtil {
           }
         }
 
-        if (ctype != null && !"".equals(ctype)) {
+        /**
+         * multipart 시 boundary 를 아래와 같이 헤더에 지정해 주어야 하므로 생략한다. (httpclient 에서 자동지정)
+         * Content-Type: multipart/form-data; boundary=B0I_RCOhwk4g91PaSWzV_Vhk1_DbB4
+         **/
+        if (ctype != null && !"".equals(ctype) && !"multipart/form-data".equals(ctype)) {
           this.headers.put("Content-Type", cat(ctype, chset != null && !"".equals(chset) ? cat(";charset=", chset) : ""));
         }
 
@@ -942,7 +946,7 @@ public class HttpUtil {
                 } else if (val instanceof InputStream) {
                   MultipartEntityBuilderAddBinaryBody.invoke(builder, array(key, val, MultipartTypeDefault, key));
                 } else {
-                  MultipartEntityBuilderAddTextBody.invoke(builder, key, String.valueOf(val != null ? val : ""));
+                  MultipartEntityBuilderAddTextBody.invoke(builder, key, URLEncoder.encode(String.valueOf(val != null ? val : ""), UTF8));
                 }
               }
               entity = MultipartEntityBuilderBuild.invoke(builder, EMPTY_OBJ);
