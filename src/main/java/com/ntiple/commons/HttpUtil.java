@@ -87,6 +87,7 @@ public class HttpUtil {
   private static Constructor<?> HttpPutConstr = null;
   private static Constructor<?> HttpTraceConstr = null;
   private static Constructor<?> HttpHostConstr = null;
+  private static Method ContentTypeCreate = null;
   private static Method HCBCreate = null;
   private static Method HCBBuild = null;
   private static Method HCBSetSSLContext = null;
@@ -293,9 +294,10 @@ public class HttpUtil {
     try {
       Class<?> MultipartEntityBuilder = findClass("org.apache.http.entity.mime.MultipartEntityBuilder");
       Class<?> ContentType = findClass("org.apache.http.entity.ContentType");
+      ContentTypeCreate = findMethod(ContentType, "create", array(String.class, String.class));
       MultipartEntityBuilderCreate = findMethod(MultipartEntityBuilder, "create", EMPTY_CLS);
       MultipartEntityBuilderAddBinaryBody = findMethod(MultipartEntityBuilder, "addBinaryBody", array(String.class, InputStream.class, ContentType, String.class));
-      MultipartEntityBuilderAddTextBody = findMethod(MultipartEntityBuilder, "addTextBody", array(String.class, String.class)) ;
+      MultipartEntityBuilderAddTextBody = findMethod(MultipartEntityBuilder, "addTextBody", array(String.class, String.class, ContentType)) ;
       MultipartEntityBuilderBuild = findMethod(MultipartEntityBuilder, "build", EMPTY_CLS);
       MultipartTypeDefault = findFieldValue(ContentType, "DEFAULT_BINARY");
     } catch (Throwable ignore) { log.debug("E:{}", ignore); }
@@ -937,6 +939,7 @@ public class HttpUtil {
             case "multipart/form-data": {
               Object builder = MultipartEntityBuilderCreate.invoke(null, EMPTY_OBJ);
               Map<String, Object> map = convert(this.contents, newMap());
+              Object ttype = ContentTypeCreate.invoke(null, "text/plain", chset);
               for (String key : map.keySet()) {
                 Object val = map.get(key);
                 if (val instanceof File) {
@@ -946,7 +949,7 @@ public class HttpUtil {
                 } else if (val instanceof InputStream) {
                   MultipartEntityBuilderAddBinaryBody.invoke(builder, array(key, val, MultipartTypeDefault, key));
                 } else {
-                  MultipartEntityBuilderAddTextBody.invoke(builder, key, URLEncoder.encode(String.valueOf(val != null ? val : ""), UTF8));
+                  MultipartEntityBuilderAddTextBody.invoke(builder, key, String.valueOf(val != null ? val : ""), ttype);
                 }
               }
               entity = MultipartEntityBuilderBuild.invoke(builder, EMPTY_OBJ);
