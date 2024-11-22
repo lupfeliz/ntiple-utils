@@ -16,6 +16,8 @@ import static com.ntiple.commons.Constants.PASSWORD;
 import static java.lang.Math.abs;
 
 import java.security.SecureRandom;
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -115,6 +117,15 @@ public class ValuesUtil {
 
   public static boolean isEmpty(String o) {
     return o == null || "".equals(o);
+  }
+
+  public static List<String> codeSplit(Object v, String delim) {
+    List<String> ret = null;
+    if (v != null) {
+      String[] split = String.valueOf(v).replaceAll("\\s*", "").split(delim);
+      ret = Arrays.asList(split);
+    }
+    return ret;
   }
 
   // public static String removeTags(Object html) {

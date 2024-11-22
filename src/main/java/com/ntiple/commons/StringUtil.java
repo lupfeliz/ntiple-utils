@@ -121,13 +121,4 @@ public class StringUtil {
     }
     return String.valueOf(ret);
   }
-
-  // public static List<String> codeSplit(Object v, String delim) {
-  //   List<String> ret = null;
-  //   if (v != null) {
-  //     String[] split = String.valueOf(v).replaceAll("\\\s*", "").split(delim);
-  //     ret = Arrays.asList(split);
-  //   }
-  //   return ret;
-  // }
 }

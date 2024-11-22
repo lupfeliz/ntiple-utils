@@ -87,6 +87,7 @@ public class WebUtil {
   }
   
   public static <T> T curRequest(Class<T> cls) { return cast(curRequest(), cls); }
+  public static <T> T curRequest(T obj) { return cast(curRequest(), obj); }
   public static Object curRequest() {
     Object ret = null;
     if (RequestContextHolder == null) { return ret; }
@@ -99,6 +100,7 @@ public class WebUtil {
 
   public static <T> T curResponse(Class<T> cls) { return curResponse(curRequest(), cls); }
   public static <T> T curResponse(Object req, Class<T> cls) { return cast(curResponse(req), cls); }
+  public static <T> T curResponse(Object req, T obj) { return cast(curResponse(req), obj); }
   public static Object curResponse(Object request) {
     if (request != null && HttpServletRequest != null && HttpServletRequest != null) {
       try {
@@ -274,6 +276,8 @@ public class WebUtil {
     return ret;
   }
 
+  public static RequestParameter params() { return params(curRequest()); }
+  public static RequestParameter params(Object req) { return new RequestParameter(req); }
   public static class RequestParameter {
     private Map<String, String[]> pmap;
 
