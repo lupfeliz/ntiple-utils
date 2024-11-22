@@ -14,6 +14,7 @@ import static com.ntiple.commons.ConvertUtil.array;
 import static com.ntiple.commons.ConvertUtil.convert;
 import static com.ntiple.commons.ConvertUtil.newMap;
 import static com.ntiple.commons.ConvertUtil.parseInt;
+import static com.ntiple.commons.IOUtils.istream;
 import static com.ntiple.commons.IOUtils.reader;
 import static com.ntiple.commons.IOUtils.safeclose;
 import static com.ntiple.commons.ReflectionUtil.cast;
@@ -27,6 +28,7 @@ import static com.ntiple.commons.ReflectionUtil.newInstance;
 import static com.ntiple.commons.StringUtil.cat;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
@@ -108,6 +110,7 @@ public class HttpUtil {
   private static Method MultipartEntityBuilderAddBinaryBody = null;
   private static Method MultipartEntityBuilderAddTextBody = null;
   private static Method MultipartEntityBuilderBuild = null;
+  private static Object MultipartTypeDefault = null;
 
   private static Class<?> LaxRedirectStrategy = null;
   private static Class<?> BasicCookieStore = null;
@@ -286,6 +289,15 @@ public class HttpUtil {
       JHttpClientSend = findMethod(JHttpClient, "send", array(JHttpRequest, JHttpBodyHandler));
       JHttpResponseInputStream = findMethod(JHttpBodyHandlers, "ofInputStream", EMPTY_CLS);
       System.setProperty("jdk.httpclient.allowRestrictedHeaders", "connection,content-length,host,upgrade");
+    } catch (Throwable ignore) { log.debug("E:{}", ignore); }
+    try {
+      Class<?> MultipartEntityBuilder = findClass("org.apache.http.entity.mime.MultipartEntityBuilder");
+      Class<?> ContentType = findClass("org.apache.http.entity.ContentType");
+      MultipartEntityBuilderCreate = findMethod(MultipartEntityBuilder, "create", EMPTY_CLS);
+      MultipartEntityBuilderAddBinaryBody = findMethod(MultipartEntityBuilder, "addBinaryBody", array(String.class, InputStream.class, ContentType, String.class));
+      MultipartEntityBuilderAddTextBody = findMethod(MultipartEntityBuilder, "addTextBody", array(String.class, String.class)) ;
+      MultipartEntityBuilderBuild = findMethod(MultipartEntityBuilder, "build", EMPTY_CLS);
+      MultipartTypeDefault = findFieldValue(ContentType, "DEFAULT_BINARY");
     } catch (Throwable ignore) { log.debug("E:{}", ignore); }
     log.setLevel(logLevel);
   }
@@ -506,8 +518,7 @@ public class HttpUtil {
   /**
    * URL 중 scheme 부분을 제외한 URI 부분의 double slash 를 삭제한다.
    * 예 :
-   * http://localhost:8080/api///main =>
-   * http://localhost:8080/api/main
+   * http://localhost:8080/api///main → http://localhost:8080/api/main
    * ※ http* 이외의 scheme 은 무시
    */
   public static String cleanURL(String url) {
@@ -920,7 +931,21 @@ public class HttpUtil {
             Object entity = null;
             SW3: switch (ctype) {
             case "multipart/form-data": {
-              /** TODO: multipart 구현 필요 */
+              Object builder = MultipartEntityBuilderCreate.invoke(null, EMPTY_OBJ);
+              Map<String, Object> map = convert(this.contents, newMap());
+              for (String key : map.keySet()) {
+                Object val = map.get(key);
+                if (val instanceof File) {
+                  File file = cast(val, file = null);
+                  InputStream fstream = istream(file);
+                  MultipartEntityBuilderAddBinaryBody.invoke(builder, array(key, fstream, MultipartTypeDefault, file.getName()));
+                } else if (val instanceof InputStream) {
+                  MultipartEntityBuilderAddBinaryBody.invoke(builder, array(key, val, MultipartTypeDefault, key));
+                } else {
+                  MultipartEntityBuilderAddTextBody.invoke(builder, key, String.valueOf(val != null ? val : ""));
+                }
+              }
+              entity = MultipartEntityBuilderBuild.invoke(builder, EMPTY_OBJ);
             } break SW3;
             case "text/plain": {
               entity = StringEntityConstr.newInstance(String.valueOf(this.contents != null ? this.contents : ""), chset);
