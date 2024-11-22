@@ -21,19 +21,19 @@ public class ReflectionUtil {
   public static Class<?>[] UNARY_CLS_STRING = new Class<?>[] { String.class };
 
 
-  public static final Class<?> findClass(String clsname) throws Exception { return Class.forName(clsname); }
+  public static final Class<?> findClass(String clsname) throws Exception { return Class.forName(clsname.trim()); }
   public static final Method findMethod(Class<?> cls, String name, Class<?>... arg) throws Exception {
-    try { return cls.getDeclaredMethod(name, arg); } catch (Throwable ignore) { };
-    try { return cls.getMethod(name, arg); } catch (Throwable ignore) { };
+    try { return cls.getDeclaredMethod(name.trim(), arg); } catch (Throwable ignore) { };
+    try { return cls.getMethod(name.trim(), arg); } catch (Throwable ignore) { };
     return null;
   }
   public static final Field findField(Class<?> cls, String name) throws Exception {
-    try { return cls.getDeclaredField(name); } catch (Throwable ignore) { };
-    try { return cls.getField(name); } catch (Throwable ignore) { };
+    try { return cls.getDeclaredField(name.trim()); } catch (Throwable ignore) { };
+    try { return cls.getField(name.trim()); } catch (Throwable ignore) { };
     return null;
   }
-  public static final Object findFieldValue(Class<?> cls, String name) throws Exception { return findFieldValue(cls, name, null); }
-  public static final Object findFieldValue(Class<?> cls, String name, Object inst) throws Exception { return findField(cls, name).get(inst); }
+  public static final Object findFieldValue(Class<?> cls, String name) throws Exception { return findFieldValue(cls, name.trim(), null); }
+  public static final Object findFieldValue(Class<?> cls, String name, Object inst) throws Exception { return findField(cls, name.trim()).get(inst); }
   public static final Constructor<?> findConstructor(Class<?> cls) throws Exception { return cls.getDeclaredConstructor(EMPTY_CLS); }
   public static final Constructor<?> findConstructor(Class<?> cls, Class<?>... arg) throws Exception { return cls.getDeclaredConstructor(arg); }
   public static final Object newInstance(Class<?> cls) throws Exception { return findConstructor(cls).newInstance(EMPTY_OBJ); }

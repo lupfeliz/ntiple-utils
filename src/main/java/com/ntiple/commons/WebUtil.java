@@ -66,7 +66,7 @@ public class WebUtil {
       try {
         ServletRequest = findClass("jakarta.servlet.ServletRequest");
         HttpServletRequest = findClass("jakarta.servlet.http.HttpServletRequest");
-        HttpServletResponse = findClass("jakarta.servlet.http.HttpServletResponse ");
+        HttpServletResponse = findClass("jakarta.servlet.http.HttpServletResponse");
         ServletRequestGetAttribute = findMethod(ServletRequest, "getAttribute", array(String.class));
         HttpServletRequestGetHeader = findMethod(HttpServletRequest, "getHeader", array(String.class));
         HttpServletRequestGetRemoteAddr = findMethod(HttpServletRequest, "getRemoteAddr", EMPTY_CLS);
