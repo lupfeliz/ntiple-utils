@@ -68,27 +68,26 @@ public class UtilsTestcase {
     httpWorker()
       .url("https://devlog.ntiple.com")
       // .url("https://wptest.ntiple.com")
-      .address(new String[] { "203.245.30.232" })
-      // .provider(p -> p.APACHE_CLIENT_4_5)
-      .method(p -> p.GET())
+      // .address(new String[] { "203.245.30.232" })
+      // .provider(p -> p.JDK_11())
+      .provider(p -> p.APACHE_CLIENT_4_5())
+      // .method(p -> p.GET())
       // .method(p -> p.POST())
       // .contentType(p -> p.JSON())
-      .contentType(p -> p.URL_ENCODED())
+      // .contentType(p -> p.URL_ENCODED())
       // .headers(convert(new Object[][] {
-      //   { "Host", "devlog.ntiple.com" }
       // }, newMap()))
       .agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0")
-      .contents(convert(new Object[][] {
-        { "searchType", "" },
-        { "rowStart", 0 },
-        { "rowCount", 10 }
-      }, newMap()))
+      // .contents(convert(new Object[][] {
+      //   { "searchType", "" },
+      //   { "rowStart", 0 },
+      //   { "rowCount", 10 }
+      // }, newMap()))
       .work((stat, stream, header, ctx) -> {
-        try {
-          content.append(readAsString(stream, UTF8));
-        } catch (Exception e) { log.debug("E:{}", e); }
-        // log.debug("HEADERS:{}", header);
-        return content;
+        log.debug("CHECK-HEADERS:{}", header);
+        // CHECK-HEADERS:{access-control-allow-origin=[https://devlog.ntiple.com], cache-control=[no-cache], content-type=[text/html; charset=UTF-8], date=[Sat, 23 Nov 2024 20:54:25 GMT], last-modified=[Fri, 22 Nov 2024 22:15:27 GMT], server=[Apache/2.4.52 (Ubuntu)], transfer-encoding=[chunked], vary=[Accept-Encoding], wpo-cache-status=[cached]}
+        // CHECK-HEADERS:{access-control-allow-origin=[https://devlog.ntiple.com], cache-control=[no-cache], content-type=[text/html; charset=UTF-8], date=[Sat, 23 Nov 2024 20:54:55 GMT], last-modified=[Fri, 22 Nov 2024 22:15:27 GMT], server=[Apache/2.4.52 (Ubuntu)], transfer-encoding=[chunked], vary=[Accept-Encoding], wpo-cache-status=[cached]}
+        return content.append(readAsString(stream, UTF8));
       });
     log.debug("CONTENT:{}", content);
   }

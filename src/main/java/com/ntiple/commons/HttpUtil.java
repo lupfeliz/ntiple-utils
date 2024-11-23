@@ -12,6 +12,7 @@ import static com.ntiple.commons.Constants.S_HTTPS;
 import static com.ntiple.commons.Constants.UTF8;
 import static com.ntiple.commons.ConvertUtil.array;
 import static com.ntiple.commons.ConvertUtil.convert;
+import static com.ntiple.commons.ConvertUtil.list;
 import static com.ntiple.commons.ConvertUtil.newMap;
 import static com.ntiple.commons.ConvertUtil.parseInt;
 import static com.ntiple.commons.IOUtils.istream;
@@ -66,7 +67,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 
 import com.ntiple.commons.FunctionUtil.Fn1a;
-import com.ntiple.commons.FunctionUtil.Fn4a;
+import com.ntiple.commons.FunctionUtil.Fn4at;
 
 public class HttpUtil {
   private static final SimpleLogger log = SimpleLogger.getLogger();
@@ -99,6 +100,7 @@ public class HttpUtil {
   private static Method RequestGetHeader = null;
   private static Method RequestBaseAddHeader = null;
   private static Method ResponseGetEntity = null;
+  private static Method ResponseGetAllHeaders = null;
   private static Method HttpEntityGetContent = null;
   private static Method RequestGetInputStream = null;
   private static Method RequestGetAttributeNames = null;
@@ -118,6 +120,9 @@ public class HttpUtil {
   private static Class<?> PoolingHttpClientConnectionManager = null;
   private static Class<?> UrlEncodedFormEntity = null;
   private static Constructor<?> UrlEncodedFormEntityConstr = null;
+  private static Class<?> NameValuePair = null;
+  private static Method NameValuePairGetName = null;
+  private static Method NameValuePairGetValue = null;
   private static Class<?> BasicNameValuePair = null;
   private static Constructor<?> BasicNameValuePairConstr = null;
   private static Class<?> StringEntity = null;
@@ -204,7 +209,9 @@ public class HttpUtil {
       {
         Class<?> HttpEntity = findClass("org.apache.http.HttpEntity");
         Class<?> HttpResponse = findClass("org.apache.http.HttpResponse");
+        Class<?> HttpMessage = findClass("org.apache.http.HttpMessage");
         ResponseGetEntity = findMethod(HttpResponse, "getEntity", EMPTY_CLS);
+        ResponseGetAllHeaders = findMethod(HttpMessage, "getAllHeaders", EMPTY_CLS);
         HttpEntityGetContent = findMethod(HttpEntity, "getContent", EMPTY_CLS);
         Class<?> HttpEntityRequestBase = findClass("org.apache.http.client.methods.HttpEntityEnclosingRequestBase");
         HttpRequestSetEntity = findMethod(HttpEntityRequestBase, "setEntity", array(HttpEntity));
@@ -221,6 +228,9 @@ public class HttpUtil {
       UrlEncodedFormEntityConstr = findConstructor(UrlEncodedFormEntity, array(List.class, String.class));
       BasicNameValuePair = findClass("org.apache.http.message.BasicNameValuePair");
       BasicNameValuePairConstr = findConstructor(BasicNameValuePair, array(String.class, String.class));
+      NameValuePair = findClass("org.apache.http.NameValuePair");
+      NameValuePairGetName = findMethod(NameValuePair, "getName", EMPTY_CLS);
+      NameValuePairGetValue = findMethod(NameValuePair, "getValue", EMPTY_CLS);
 
       StringEntity = findClass("org.apache.http.entity.StringEntity");
       StringEntityConstr = findConstructor(StringEntity, array(String.class, String.class));
@@ -838,7 +848,7 @@ public class HttpUtil {
       return context;
     }
 
-    public Object work(Fn4a<Integer, InputStream, Map<String, List<String>>, Map<String, Object>, Object> callable) {
+    public Object work(Fn4at<Integer, InputStream, Map<String, List<String>>, Map<String, Object>, Object> callable) {
       Object ret = null;
       InputStream istream = null;
       Integer state = -1;
@@ -1006,9 +1016,22 @@ public class HttpUtil {
           if (client == null) { context.put(HttpClient.getName(), client = httpClient()); }
           Object result = execute(client, target, request, null, Object.class);
           Object entity = ResponseGetEntity.invoke(result, EMPTY_OBJ);
-          // Header[] headers = result.getAllHeaders() / getName, getValue
+          Object[] headers = cast(ResponseGetAllHeaders.invoke(result, EMPTY_OBJ), headers = null);
           istream = cast(HttpEntityGetContent.invoke(entity, EMPTY_OBJ), InputStream.class);
           if (headerMap == null) { headerMap = cast(newMap(), headerMap = null); }
+          if (headers != null) {
+            for (int inx = 0; inx < headers.length; inx++) {
+              String name = cast(NameValuePairGetName.invoke(headers[inx], EMPTY_OBJ), "");
+              String value = cast(NameValuePairGetValue.invoke(headers[inx], EMPTY_OBJ), "");
+              if (headerMap.containsKey(name)) {
+                List<String> v = headerMap.get(name);
+                if (v != null) { v.add(value); }
+              } else {
+                headerMap.put(name, list(value));
+              }
+            }
+          }
+
           ret = cast(callable.apply(state, istream, headerMap, this.context), ret);
         } break SW1; }
       } catch (Exception e) {

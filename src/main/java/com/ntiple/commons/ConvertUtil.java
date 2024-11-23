@@ -1044,6 +1044,13 @@ public class ConvertUtil {
     return ret;
   }
 
+  @SafeVarargs
+  public static <T> List<T> list(T... arr) {
+    List<T> ret = new ArrayList<>();
+    for (int inx = 0; inx < arr.length; inx++) { ret.add(arr[inx]); }
+    return ret;
+  }
+
   public static <T> T arrayValue(T[] arr, int inx) { return arrayValue(arr, inx, null); }
   public static <T> T arrayValue(T[] arr, int inx, T def) {
     T ret = def;
