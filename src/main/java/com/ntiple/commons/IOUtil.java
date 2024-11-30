@@ -172,13 +172,13 @@ public class IOUtil {
 
   public static OutputStream ostream(File file) throws Exception {
     OutputStream ret = null;
-    if (file != null && file.exists()) { ret = new FileOutputStream(file); }
+    if (file != null) { ret = new FileOutputStream(file); }
     return ret;
   }
 
   public static BufferedWriter writer(File file, String charset) {
     BufferedWriter ret = null;
-    if (file != null && file.exists()) { BufferedWriterWrapper.createWriter(file, charset); }
+    if (file != null) { BufferedWriterWrapper.createWriter(file, charset); }
     return ret;
   }
 
