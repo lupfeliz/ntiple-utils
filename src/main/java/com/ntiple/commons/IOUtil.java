@@ -1,5 +1,5 @@
 /**
- * @File        : IOUtils.java
+ * @File        : IOUtil.java
  * @Author      : 정재백
  * @Since       : 2023-11-19
  * @Description : 입출력 유틸
