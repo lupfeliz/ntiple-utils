@@ -8,8 +8,8 @@
 package com.ntiple.commons;
 
 import static com.ntiple.commons.Constants.UTF8;
-import static com.ntiple.commons.IOUtils.safeclose;
-import static com.ntiple.commons.IOUtils.writer;
+import static com.ntiple.commons.IOUtil.safeclose;
+import static com.ntiple.commons.IOUtil.writer;
 
 import java.io.BufferedWriter;
 import java.io.InputStream;

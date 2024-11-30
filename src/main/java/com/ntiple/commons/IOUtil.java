@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-public class IOUtils {
+public class IOUtil {
 
   private static final SimpleLogger log = SimpleLogger.getLogger();
 
@@ -146,31 +146,46 @@ public class IOUtils {
   // }
 
   public static InputStream istream(File file) throws Exception {
-    return new FileInputStream(file);
+    InputStream ret = null;
+    if (file != null && file.exists()) { ret = new FileInputStream(file); }
+    return ret;
   }
 
   public static BufferedReader reader(File file, String charset) {
-    return BufferedReaderWrapper.createReader(file, charset);
+    BufferedReader ret = null;
+    if (charset == null) { charset = UTF8; }
+    if (file != null && file.exists()) { ret = BufferedReaderWrapper.createReader(file, charset); }
+    return ret;
   }
 
   public static BufferedReader reader(Reader reader) {
-    return BufferedReaderWrapper.createReader(reader);
+    BufferedReader ret = null;
+    if (reader != null) { ret = BufferedReaderWrapper.createReader(reader); }
+    return ret;
   }
 
   public static BufferedReader reader(InputStream istream, String charset) {
-    return BufferedReaderWrapper.createReader(istream, charset);
+    BufferedReader ret = null;
+    if (istream != null) { ret = BufferedReaderWrapper.createReader(istream, charset); }
+    return ret;
   }
 
   public static OutputStream ostream(File file) throws Exception {
-    return new FileOutputStream(file);
+    OutputStream ret = null;
+    if (file != null && file.exists()) { ret = new FileOutputStream(file); }
+    return ret;
   }
 
   public static BufferedWriter writer(File file, String charset) {
-    return BufferedWriterWrapper.createWriter(file, charset);
+    BufferedWriter ret = null;
+    if (file != null && file.exists()) { BufferedWriterWrapper.createWriter(file, charset); }
+    return ret;
   }
 
   public static BufferedWriter writer(OutputStream ostream, String charset) {
-    return BufferedWriterWrapper.createWriter(ostream, charset);
+    BufferedWriter ret = null;
+    if (ostream != null) { ret = BufferedWriterWrapper.createWriter(ostream, charset); }
+    return ret;
   }
 
   public static String readAsString(File input) throws IOException { return doReadAsString(input, UTF8); }
@@ -191,20 +206,23 @@ public class IOUtils {
       } else if (input instanceof Reader) {
         reader = reader((Reader) input);
       }
-      for (String rl; (rl = reader.readLine()) != null;) {
-        ret.append(rl).append("\n");
+      if (reader != null) {
+        for (String rl; (rl = reader.readLine()) != null;) {
+          ret.append(rl).append("\n");
+        }
       }
     } finally {
       safeclose(reader);
     }
-    return ret.substring(0, ret.length() - 1);
+    if (ret.length() > 0) { return ret.substring(0, ret.length() - 1); }
+    return String.valueOf(ret);
   }
 
   public static void writeToFile(String str, File file, String charset) {
     Writer writer = null;
     try {
       writer = writer(file, charset);
-      writer.append(str).flush();
+      if (writer != null) { writer.append(str).flush(); }
     } catch (Exception ignore) {
     } finally {
       safeclose(writer);
@@ -234,8 +252,10 @@ public class IOUtils {
       BufferedReaderWrapper inst = null;
       InputStream istream = null;
       try {
-        istream = new FileInputStream(file);
-        inst = createReader(istream, charset);
+        if (file != null && file.exists()) {
+          istream = new FileInputStream(file);
+          inst = createReader(istream, charset);
+        }
       } catch (Exception e) {
         safeclose(istream);
       }
@@ -245,11 +265,13 @@ public class IOUtils {
       BufferedReaderWrapper inst = null;
       Reader reader = null;
       try {
-        reader = new InputStreamReader(istream, charset);
-        inst = new BufferedReaderWrapper(reader);
-        inst.reader = new BufferedReader(reader);
-        inst.closeables.add(reader);
-        inst.closeables.add(istream);
+        if (istream != null) {
+          reader = new InputStreamReader(istream, charset);
+          inst = new BufferedReaderWrapper(reader);
+          inst.reader = new BufferedReader(reader);
+          inst.closeables.add(reader);
+          inst.closeables.add(istream);
+        }
       } catch (Exception e) {
         safeclose(istream);
         safeclose(reader);
@@ -260,9 +282,11 @@ public class IOUtils {
     public static BufferedReaderWrapper createReader(Reader reader) {
       BufferedReaderWrapper inst = null;
       try {
-        inst = new BufferedReaderWrapper(reader);
-        inst.reader = new BufferedReader(reader);
-        inst.closeables.add(reader);
+        if (reader != null) {
+          inst = new BufferedReaderWrapper(reader);
+          inst.reader = new BufferedReader(reader);
+          inst.closeables.add(reader);
+        }
       } catch (Exception e) {
         safeclose(reader);
       }
@@ -354,10 +378,12 @@ public class IOUtils {
   }
 
   public static InputStream openResourceStream(Class<?> baseClass, String... path) throws Exception {
+    InputStream ret = null;
     Object[] args = cast(path, args = null);
     URL resource = baseClass.getResource(cat(args));
-    // log.trace("RESOURCE:{} / {}", path, resource);
-    return resource.openStream();
+    if (resource != null) { ret = resource.openStream(); }
+    log.trace("RESOURCE:{} / {}", path, resource);
+    return ret;
   }
 
   public static String getContentFromResourceAsString(Class<?> baseClass, String... path) throws Exception {

@@ -11,10 +11,10 @@ import static com.ntiple.commons.Constants.UTF8;
 import static com.ntiple.commons.ConvertUtil.convert;
 import static com.ntiple.commons.ConvertUtil.newMap;
 import static com.ntiple.commons.HttpUtil.httpWorker;
-import static com.ntiple.commons.IOUtils.readAsString;
-import static com.ntiple.commons.IOUtils.reader;
-import static com.ntiple.commons.IOUtils.safeclose;
-import static com.ntiple.commons.IOUtils.writer;
+import static com.ntiple.commons.IOUtil.readAsString;
+import static com.ntiple.commons.IOUtil.reader;
+import static com.ntiple.commons.IOUtil.safeclose;
+import static com.ntiple.commons.IOUtil.writer;
 import static com.ntiple.commons.ReflectionUtil.cast;
 import static org.junit.jupiter.api.Assertions.*;
 
