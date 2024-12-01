@@ -1002,7 +1002,18 @@ public class ConvertUtil {
       if (item instanceof Map) {
         Map<String, T> map = cast(item, map = null);
         for (String key : map.keySet()) {
-          ret.put(key, map.get(key));
+          T v1 = map.get(key);
+          T v2 = ret.get(key);
+          if (v1 != null) {
+            if (v1 instanceof Map && v2 instanceof Map) {
+              Map<?, ?> m1 = cast(v1, m1 = null);
+              Map<?, ?> m2 = cast(v2, m2 = null);
+              if (m1 != null && m2 != null) { v1 = cast(mergeMap(m1, m2), v1); }
+              ret.put(key, v1);
+            } else {
+              ret.put(key, v1);
+            }
+          }
         }
       }
     }
