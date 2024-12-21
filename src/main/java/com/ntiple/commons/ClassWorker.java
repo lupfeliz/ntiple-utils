@@ -133,6 +133,8 @@ public class ClassWorker {
     try {
       String bpath = getResourcePath(loader, "");
       for (int inx = 0; inx < pkgs.length; inx++) {
+        bpath = bpath.replaceAll("[/]resources[/]main[/]$", "/classes/java/main/");
+        bpath = bpath.replaceAll("[/]resources[/]test[/]$", "/classes/java/test/");
         findClasses(bpath, getResourcePath(loader, strreplace(pkgs[inx], ".", "/")), callback);
       }
     } catch (Exception e) {
