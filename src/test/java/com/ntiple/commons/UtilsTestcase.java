@@ -31,6 +31,9 @@ import org.junit.jupiter.api.Test;
 import com.ntiple.commons.TestUtil.TestLevel;
 
 public class UtilsTestcase {
+
+  SimpleLogger log = SimpleLogger.getLogger();
+
   @Test public void testSimple() throws Exception {
     assertTrue(true);
   }

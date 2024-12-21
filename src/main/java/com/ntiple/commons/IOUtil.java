@@ -35,25 +35,78 @@ public class IOUtil {
 
   private static final SimpleLogger log = SimpleLogger.getLogger();
 
-  public static final int passthrough(InputStream istream, OutputStream ostream) throws IOException {
-    int ret = 0;
-    if (istream != null && ostream != null) {
-      byte[] buf = new byte[4096];
-      for (int rl; (rl = istream.read(buf, 0, buf.length)) != -1;) {
-        ret += rl;
-        ostream.write(buf, 0, rl);
-      }
-    }
-    return ret;
-  }
+  // public static final int passthrough(InputStream istream, OutputStream ostream) throws IOException {
+  //   int ret = 0;
+  //   if (istream != null && ostream != null) {
+  //     byte[] buf = new byte[4096];
+  //     for (int rl; (rl = istream.read(buf, 0, buf.length)) != -1;) {
+  //       ret += rl;
+  //       ostream.write(buf, 0, rl);
+  //     }
+  //   }
+  //   return ret;
+  // }
+  // public static final int passthrough(Reader reader, Writer writer) throws IOException {
+  //   int ret = 0;
+  //   if (reader != null && writer != null) {
+  //     char[] buf = new char[4096];
+  //     for (int rl; (rl = reader.read(buf, 0, buf.length)) != -1;) {
+  //       ret += rl;
+  //       writer.write(buf, 0, rl);
+  //     }
+  //   }
+  //   return ret;
+  // }
 
-  public static final int passthrough(Reader reader, Writer writer) throws IOException {
+  public static final int passthrough(Object in, Object out) throws IOException { return passthrough(in, out, UTF8, 4096); }
+  public static final int passthrough(Object in, Object out, String charset, int bufsize) throws IOException {
     int ret = 0;
-    if (reader != null && writer != null) {
-      char[] buf = new char[4096];
-      for (int rl; (rl = reader.read(buf, 0, buf.length)) != -1;) {
-        ret += rl;
-        writer.write(buf, 0, rl);
+    if (in == null || out == null) { return ret; }
+    if (in instanceof InputStream) {
+      InputStream istream = cast(in, istream = null);
+      if (out instanceof OutputStream) {
+        OutputStream ostream = cast(out, ostream = null);
+        byte[] buf = new byte[bufsize];
+        for (int rl; (rl = istream.read(buf, 0, buf.length)) != -1;) {
+          ret += rl;
+          ostream.write(buf, 0, rl);
+        }
+      } else if (out instanceof Writer) {
+        Reader reader = null;
+        try { ret = passthrough(reader = reader(istream, charset), out, charset, bufsize); } finally { safeclose(reader); }
+      } else if (out instanceof File) {
+        OutputStream ostream = null;
+        try { ret = passthrough(in, ostream = ostream(file(out)), charset, bufsize); } finally { safeclose(ostream); }
+      }
+    } else if (in instanceof Reader) {
+      Reader reader = cast(in, reader = null);
+      if (out instanceof OutputStream) {
+        OutputStream ostream = cast(out, ostream = null);
+        BufferedWriter writer = writer(ostream, charset);
+        try { ret = passthrough(in, writer, charset, bufsize); } finally { safeclose(writer); }
+      } else if (out instanceof Writer) {
+        Writer writer = cast(out, writer = null);
+        char[] buf = new char[bufsize];
+        for (int rl; (rl = reader.read(buf, 0, buf.length)) != -1;) {
+          ret += rl;
+          writer.write(buf, 0, rl);
+        }
+      } else if (out instanceof File) {
+        Writer writer = null;
+        try { ret = passthrough(in, writer = writer(file(out), charset), charset, bufsize); } finally { safeclose(writer); }
+      }
+    } else if (in instanceof File) {
+      File file = file(in);
+      if (out instanceof OutputStream) {
+        InputStream istream = null;
+        try { ret = passthrough(istream = istream(file), out, charset, bufsize); } finally { safeclose(istream); }
+      } else if (out instanceof Writer) {
+        Reader reader = null;
+        try { ret = passthrough(reader = reader(file, charset), out, charset, bufsize); } finally { safeclose(reader); }
+      } else if (out instanceof File) {
+        InputStream istream = null;
+        OutputStream ostream = null;
+        try { ret = passthrough(istream = istream(file), ostream = ostream(file(out)), charset, bufsize); } finally { safeclose(istream); safeclose(ostream); }
       }
     }
     return ret;
@@ -145,44 +198,44 @@ public class IOUtil {
   //   return ret;
   // }
 
-  public static InputStream istream(File file) throws Exception {
+  public static InputStream istream(File file) throws IOException {
     InputStream ret = null;
     if (file != null && file.exists()) { ret = new FileInputStream(file); }
     return ret;
   }
 
-  public static BufferedReader reader(File file, String charset) {
+  public static BufferedReader reader(File file, String charset) throws IOException {
     BufferedReader ret = null;
     if (charset == null) { charset = UTF8; }
     if (file != null && file.exists()) { ret = BufferedReaderWrapper.createReader(file, charset); }
     return ret;
   }
 
-  public static BufferedReader reader(Reader reader) {
+  public static BufferedReader reader(Reader reader) throws IOException {
     BufferedReader ret = null;
     if (reader != null) { ret = BufferedReaderWrapper.createReader(reader); }
     return ret;
   }
 
-  public static BufferedReader reader(InputStream istream, String charset) {
+  public static BufferedReader reader(InputStream istream, String charset) throws IOException {
     BufferedReader ret = null;
     if (istream != null) { ret = BufferedReaderWrapper.createReader(istream, charset); }
     return ret;
   }
 
-  public static OutputStream ostream(File file) throws Exception {
+  public static OutputStream ostream(File file) throws IOException {
     OutputStream ret = null;
     if (file != null) { ret = new FileOutputStream(file); }
     return ret;
   }
 
-  public static BufferedWriter writer(File file, String charset) {
+  public static BufferedWriter writer(File file, String charset) throws IOException {
     BufferedWriter ret = null;
     if (file != null) { BufferedWriterWrapper.createWriter(file, charset); }
     return ret;
   }
 
-  public static BufferedWriter writer(OutputStream ostream, String charset) {
+  public static BufferedWriter writer(OutputStream ostream, String charset) throws IOException {
     BufferedWriter ret = null;
     if (ostream != null) { ret = BufferedWriterWrapper.createWriter(ostream, charset); }
     return ret;
@@ -218,7 +271,7 @@ public class IOUtil {
     return String.valueOf(ret);
   }
 
-  public static void writeToFile(String str, File file, String charset) {
+  public static void writeToFile(String str, File file, String charset) throws IOException {
     Writer writer = null;
     try {
       writer = writer(file, charset);
