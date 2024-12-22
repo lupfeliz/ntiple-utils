@@ -7,11 +7,11 @@
  **/
 package com.ntiple.commons;
 
-import static com.ntiple.commons.ReflectionUtil.cast;
 import static com.ntiple.commons.ReflectionUtil.EMPTY_CLS;
 import static com.ntiple.commons.ReflectionUtil.EMPTY_OBJ;
 import static com.ntiple.commons.ReflectionUtil.UNARY_CLS_INT;
 import static com.ntiple.commons.ReflectionUtil.UNARY_CLS_STRING;
+import static com.ntiple.commons.ReflectionUtil.cast;
 import static com.ntiple.commons.StringUtil.camelCase;
 import static com.ntiple.commons.StringUtil.capitalize;
 import static com.ntiple.commons.StringUtil.cat;

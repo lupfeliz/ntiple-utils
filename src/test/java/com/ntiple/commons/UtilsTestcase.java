@@ -28,6 +28,7 @@ import java.net.Socket;
 
 import org.junit.jupiter.api.Test;
 
+import com.ntiple.commons.SimpleLogger;
 import com.ntiple.commons.TestUtil.TestLevel;
 
 public class UtilsTestcase {
