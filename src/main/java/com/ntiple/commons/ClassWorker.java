@@ -45,8 +45,10 @@ public class ClassWorker {
 
   static class ClassFileFilter implements FileFilter {
     private String base;
+    private ClassLoader loader;
     private Fn1avt<Class<?>> callback;
-    public ClassFileFilter(String base, Fn1avt<Class<?>> callback) {
+    public ClassFileFilter(ClassLoader loader, String base, Fn1avt<Class<?>> callback) {
+      this.loader = loader;
       this.base = base;
       this.callback = callback;
     }
@@ -67,7 +69,8 @@ public class ClassWorker {
               name = strreplace(name.substring(prefix.length()).replaceAll("[.]class$", ""), "/", ".");
               log.trace("CLASS:{}", name);
               try {
-                callback.apply(Class.forName(name));
+                callback.apply(Class.forName(name, false, loader));
+                // callback.apply(Class.forName(name));
                 break LOOP;
               } catch (Exception e) {
                 log.trace("E:", e);
@@ -80,13 +83,13 @@ public class ClassWorker {
     }
   }
 
-  public static void findClasses(String bpath, String fpath, Fn1avt<Class<?>> callback) {
+  public static void findClasses(ClassLoader loader, String bpath, String fpath, Fn1avt<Class<?>> callback) {
     String jarext = ".jar";
     try {
       File file = new File(fpath);
       if (file.exists()) {
         log.trace("FILE:{} / {}", bpath, fpath);
-        file.listFiles(new ClassFileFilter(bpath, callback));
+        file.listFiles(new ClassFileFilter(loader, bpath, callback));
       } else if (
         fpath.indexOf(cat((jarext = ".jar"), "!/")) != -1 ||
         fpath.indexOf(cat((jarext = ".war"), "!/")) != -1) {
@@ -114,7 +117,8 @@ public class ClassWorker {
                 ename = strreplace(ename, "/", ".");
                 log.trace("ENTRY:{}", ename);
                 try {
-                  callback.apply(Class.forName(ename));
+                  callback.apply(Class.forName(ename, false, loader));
+                  // callback.apply(Class.forName(ename));
                 } catch (Exception e) {
                   log.trace("E:", e);
                 }
@@ -135,7 +139,7 @@ public class ClassWorker {
       for (int inx = 0; inx < pkgs.length; inx++) {
         bpath = bpath.replaceAll("[/]resources[/]main[/]$", "/classes/java/main/");
         bpath = bpath.replaceAll("[/]resources[/]test[/]$", "/classes/java/test/");
-        findClasses(bpath, getResourcePath(loader, strreplace(pkgs[inx], ".", "/")), callback);
+        findClasses(loader, bpath, getResourcePath(loader, strreplace(pkgs[inx], ".", "/")), callback);
       }
     } catch (Exception e) {
       log.debug("CANNOT ACCESS PACKAGE:{}{} / {}", "", pkgs, e.getMessage());
