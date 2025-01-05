@@ -12,7 +12,7 @@ plugins {
 }
 
 group = 'com.ntiple'
-version = '0.0.3-11'
+version = '0.0.3-12'
 
 java {
   sourceCompatibility = JavaVersion.VERSION_1_8
@@ -23,6 +23,10 @@ java {
 
 jar {
   from sourceSets.main.allSource
+}
+
+tasks.withType(Javadoc).configureEach {
+  options.addStringOption('Xdoclint:-missing', '-quiet')
 }
 
 repositories {

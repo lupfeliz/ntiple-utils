@@ -252,8 +252,8 @@ public class HttpUtil {
           new Class<?>[] { TrustStrategy }, new InvocationHandler() {
           @Override public Object invoke(Object p, Method m, Object[] a) throws Throwable {
             if ("isTrusted".equals(m.getName()) && a.length == 2) { return true; }
-            return null;
-            }
+              return m.invoke(p, a);
+          }
         });
         sslContextBuilder = sslLoadTrustMaterial.invoke(sslContextBuilder, array(null, trustStrategy));
         sslContext = sslBuild.invoke(sslContextBuilder, EMPTY_OBJ);
@@ -264,7 +264,7 @@ public class HttpUtil {
             @Override public Object invoke(Object p, Method m, Object[] a) throws Throwable {
               /** 5 seconds */
               if ("getKeepAliveDuration".equals(m.getName()) && a.length == 2) { return Long.valueOf(5 * 1000); }
-              return null;
+              return m.invoke(p, a);
             }
           });
       }

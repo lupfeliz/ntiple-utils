@@ -8,6 +8,7 @@
 package com.ntiple.commons;
 
 public class FunctionUtil {
+  @FunctionalInterface public interface Fn0a<R> { public R apply(); }
   @FunctionalInterface public interface Fn1a<A1, R> { public R apply(A1 a1); }
   @FunctionalInterface public interface Fn2a<A1, A2, R> { public R apply(A1 a1, A2 a2); }
   @FunctionalInterface public interface Fn3a<A1, A2, A3, R> { public R apply(A1 a1, A2 a2, A3 a3); }
@@ -19,6 +20,7 @@ public class FunctionUtil {
   @FunctionalInterface public interface Fn9a<A1, A2, A3, A4, A5, A6, A7, A8, A9, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9); }
   @FunctionalInterface public interface Fn10a<A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10); }
 
+  @FunctionalInterface public interface Fn0av { public void apply(); }
   @FunctionalInterface public interface Fn1av<A1> { public void apply(A1 a1); }
   @FunctionalInterface public interface Fn2av<A1, A2> { public void apply(A1 a1, A2 a2); }
   @FunctionalInterface public interface Fn3av<A1, A2, A3> { public void apply(A1 a1, A2 a2, A3 a3); }
@@ -30,6 +32,7 @@ public class FunctionUtil {
   @FunctionalInterface public interface Fn9av<A1, A2, A3, A4, A5, A6, A7, A8, A9> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9); }
   @FunctionalInterface public interface Fn10av<A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10); }
 
+  @FunctionalInterface public interface Fn0at<R> { public R apply() throws Exception; }
   @FunctionalInterface public interface Fn1at<A1, R> { public R apply(A1 a1) throws Exception; }
   @FunctionalInterface public interface Fn2at<A1, A2, R> { public R apply(A1 a1, A2 a2) throws Exception; }
   @FunctionalInterface public interface Fn3at<A1, A2, A3, R> { public R apply(A1 a1, A2 a2, A3 a3) throws Exception; }
@@ -41,6 +44,7 @@ public class FunctionUtil {
   @FunctionalInterface public interface Fn9at<A1, A2, A3, A4, A5, A6, A7, A8, A9, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9) throws Exception; }
   @FunctionalInterface public interface Fn10at<A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10) throws Exception; }
 
+  @FunctionalInterface public interface Fn0avt { public void apply() throws Exception; }
   @FunctionalInterface public interface Fn1avt<A1> { public void apply(A1 a1) throws Exception; }
   @FunctionalInterface public interface Fn2avt<A1, A2> { public void apply(A1 a1, A2 a2) throws Exception; }
   @FunctionalInterface public interface Fn3avt<A1, A2, A3> { public void apply(A1 a1, A2 a2, A3 a3) throws Exception; }
