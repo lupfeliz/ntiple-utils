@@ -136,10 +136,15 @@ public class ClassWorker {
     BufferedReader reader = null;
     try {
       String bpath = getResourcePath(loader, "");
+      String pkgpath = null;
+      String fpath = null;
       for (int inx = 0; inx < pkgs.length; inx++) {
         bpath = bpath.replaceAll("[/]resources[/]main[/]$", "/classes/java/main/");
         bpath = bpath.replaceAll("[/]resources[/]test[/]$", "/classes/java/test/");
-        findClasses(loader, bpath, getResourcePath(loader, strreplace(pkgs[inx], ".", "/")), callback);
+        pkgpath = strreplace(pkgs[inx], ".", "/");
+        fpath = getResourcePath(loader, pkgpath).replaceAll("[/]$", "");
+        bpath = fpath.substring(0, fpath.length() - pkgpath.length());
+        findClasses(loader, bpath, fpath, callback);
       }
     } catch (Exception e) {
       log.debug("CANNOT ACCESS PACKAGE:{}{} / {}", "", pkgs, e.getMessage());

@@ -14,6 +14,11 @@ import static com.ntiple.commons.IOUtil.writer;
 import java.io.BufferedWriter;
 import java.io.InputStream;
 import java.io.Writer;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
 public class ProcUtil {
@@ -74,4 +79,32 @@ public class ProcUtil {
   public static void sleep(long ms) {
     try { Thread.sleep(ms); } catch (Exception ignore) { log.trace("E:{}", ignore); }
   }
+
+  private static final ScheduledExecutorService debounceScheduler = Executors.newSingleThreadScheduledExecutor();
+  private static final ConcurrentHashMap<Object, Future<?>> debounceDelayedMap = new ConcurrentHashMap<>();
+
+  /**
+   * Debounces {@code callable} by {@code delay}, i.e., schedules it to be
+   * executed after {@code delay},
+   * or cancels its execution if the method is called with the same key within the
+   * {@code delay} again.
+   * 출처 : https://stackoverflow.com/questions/4742210/implementing-debounce-in-java
+   */
+  public static void debounce(final Object key, final Runnable runnable, long delay, TimeUnit unit) {
+    final Future<?> prev = debounceDelayedMap.put(key, debounceScheduler.schedule(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          runnable.run();
+        } finally {
+          debounceDelayedMap.remove(key);
+        }
+      }
+    }, delay, unit));
+    if (prev != null) {
+      prev.cancel(true);
+    }
+  }
+  public static void debounce(final Object key, final Runnable runnable, long delay) { debounce(key, runnable, delay, TimeUnit.MILLISECONDS); }
+  public static void shutdown() { debounceScheduler.shutdownNow(); }
 }

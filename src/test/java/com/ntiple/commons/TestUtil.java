@@ -12,8 +12,6 @@ import static com.ntiple.commons.StringUtil.cat;
 import java.io.File;
 import java.net.URL;
 
-import com.ntiple.commons.SimpleLogger;
-
 public class TestUtil {
   private static final SimpleLogger log = SimpleLogger.getLogger();
   public static enum TestLevel {

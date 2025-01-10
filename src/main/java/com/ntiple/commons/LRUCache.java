@@ -91,6 +91,7 @@ public class LRUCache<K, V> {
       for (int inx = size; tail != null && inx > capacity; inx--) {
         Node<K, V> prev = tail.prev;
         cacheMap.remove(tail.key);
+        cacheList.remove(tail);
         tail = prev;
       }
     }
@@ -108,6 +109,7 @@ public class LRUCache<K, V> {
       Node<K, V> node = cacheList.head;
       @Override public boolean hasNext() { return node != null && node.next != null; }
       @Override public K next() {
+        if (node == null) { return null; }
         K ret = this.node.key;
         this.node = node.next;
         return ret;
