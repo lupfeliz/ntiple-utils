@@ -15,6 +15,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -131,6 +132,34 @@ public class IOUtil {
       ret = file.delete();
     } catch (Exception ignore) { log.trace("E:{}", ignore); }
     return ret;
+  }
+
+  public static boolean deleteAll(File file) {
+    boolean ret = false;
+    try {
+      if (!file.isDirectory()) {
+        ret = file.delete();
+      } else {
+        file.listFiles(new FileRemoveFilter());
+        ret = file.delete();
+      }
+    } catch (Exception ignore) { log.trace("E:{}", ignore); }
+    return ret;
+  }
+
+  private static class FileRemoveFilter implements FileFilter {
+    @Override public boolean accept(File file) {
+      boolean ret = false;
+      if (file == null) { return ret; }
+      if (!file.exists()) { return ret; }
+      if (!file.isDirectory()) {
+        file.delete();
+      } else {
+        file.listFiles(this);
+        file.delete();
+      }
+      return ret;
+    }
   }
 
   public static File file(Object base, String... args) {

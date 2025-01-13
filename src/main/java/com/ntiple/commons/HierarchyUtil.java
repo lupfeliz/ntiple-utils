@@ -46,7 +46,7 @@ public class HierarchyUtil {
       submap.get(key).sort(null);
     }
     /** 하위목록까지 포함한 최종 정렬 리스트 */
-    setSortAttributes(working, 1, pmap, submap, ret);
+    ret = setSortAttributes(working, 1, pmap, submap, ret);
     return ret;
   }
 
