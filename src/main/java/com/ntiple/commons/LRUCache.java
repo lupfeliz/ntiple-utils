@@ -10,6 +10,7 @@
 package com.ntiple.commons;
 
 import static com.ntiple.commons.FunctionUtil.Fn0a;
+import static com.ntiple.commons.ProcUtil.Debouncer;
 import static com.ntiple.commons.StringUtil.cat;
 
 import java.util.Iterator;
@@ -49,7 +50,7 @@ public class LRUCache<K, V> {
   public V getAsync(K key, Fn0a<V> callback, long delay) { return getAsync(key, callback, delay, -1); }
   public V getAsync(K key, Fn0a<V> callback, long delay, long expiry) {
     V ret = null;
-    if (debouncer == null) { debouncer = new Debouncer(); }
+    synchronized(this) { if (debouncer == null) { debouncer = new Debouncer(); } }
     if ((ret = this.get(key)) != null) {
       debouncer.debounce(key, () -> put(key, callback.apply(), expiry), delay);
     } else {
