@@ -7,6 +7,10 @@
  **/
 package com.ntiple.commons;
 
+import static com.ntiple.commons.StringUtil.camelCase;
+import static com.ntiple.commons.StringUtil.capitalize;
+import static com.ntiple.commons.StringUtil.cat;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -37,6 +41,85 @@ public class ReflectionUtil {
   public static final Constructor<?> findConstructor(Class<?> cls) throws Exception { return cls.getDeclaredConstructor(EMPTY_CLS); }
   public static final Constructor<?> findConstructor(Class<?> cls, Class<?>... arg) throws Exception { return cls.getDeclaredConstructor(arg); }
   public static final Object newInstance(Class<?> cls) throws Exception { return findConstructor(cls).newInstance(EMPTY_OBJ); }
+
+  public static Method getGetterMethod(Class<?> type, String key) {
+    Method ret = null;
+    try {
+      if (key == null || type == null || "".equals(key)) {
+        return ret;
+      }
+      String mname = cat("get", capitalize(camelCase(key)));
+      for (Method m : type.getMethods()) {
+        if (mname.equals(m.getName()) && m.getParameterCount() == 0) {
+          ret = m;
+          break;
+        }
+      }
+    } catch (Exception e) { log.info("E:{}", e); }
+    return ret;
+  }
+
+  public static Object invokeGetter(Object inst, String key) {
+    Object ret = null;
+    if (inst == null) { return ret; }
+    if (key == null || "".equals(key)) { return ret; }
+    Method getter = getGetterMethod(inst.getClass(), key);
+    try { ret = getter.invoke(inst); } catch (Exception e) { log.info("E:{}", e); }
+    return ret;
+  }
+
+  public static Method getSetterMethod(Class<?> type, String key) {
+    Method ret = null;
+    try {
+      if (key == null || type == null || "".equals(key)) { return ret; }
+      String mname = cat("set", capitalize(camelCase(key)));
+      for (Method m : type.getMethods()) {
+        if (mname.equals(m.getName()) && m.getParameterCount() == 1) {
+          ret = m;
+          break;
+        }
+      }
+    } catch (Exception e) { log.info("E:{}", e); }
+    return ret;
+  }
+
+  public static void invokeSetter(Object inst, String key, Object val) {
+    if (inst == null) { return; }
+    if (key == null || "".equals(key)) { return; }
+    Method setter = getSetterMethod(inst.getClass(), key);
+    try { setter.invoke(inst, val); } catch (Exception e) { log.info("E:{}", e); }
+  }
+
+  public static boolean isAssignable(Class<?> target, Class<?>... classes) {
+    if (target == null) { return false; }
+    for (Class<?> cls : classes) {
+      if (cls != null && cls.isAssignableFrom(target)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static boolean isPrimeType(Class<?> type) {
+    boolean ret = false;
+    if (type == String.class ||
+      type == int.class || type == Integer.class ||
+      type == long.class || type == Long.class ||
+      type == short.class || type == Short.class ||
+      type == byte.class || type == Byte.class ||
+      type == float.class || type == Float.class ||
+      type == double.class || type == Double.class ||
+      type == boolean.class || type == Boolean.class) {
+      ret = true;
+    }
+    return ret;
+  }
+
+  public static boolean isPrimeType(Object v) {
+    return v == null ? false : isPrimeType(v.getClass());
+  }
+
+
 
   @SuppressWarnings("unchecked")
   public static <T> T cast(Object from, T to) {
