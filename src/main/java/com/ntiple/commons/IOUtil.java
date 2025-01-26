@@ -260,7 +260,7 @@ public class IOUtil {
 
   public static BufferedWriter writer(File file, String charset) throws IOException {
     BufferedWriter ret = null;
-    if (file != null) { BufferedWriterWrapper.createWriter(file, charset); }
+    if (file != null) { ret = BufferedWriterWrapper.createWriter(file, charset); }
     return ret;
   }
 

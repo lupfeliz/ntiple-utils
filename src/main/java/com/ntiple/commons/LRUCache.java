@@ -9,6 +9,7 @@
  **/
 package com.ntiple.commons;
 
+import static com.ntiple.commons.FunctionUtil.Fn0a;
 import static com.ntiple.commons.StringUtil.cat;
 
 import java.util.Iterator;
@@ -22,6 +23,7 @@ public class LRUCache<K, V> {
   private final DoublyLinkedList<K, V> cacheList;
   private final Map<K, Node<K, V>> cacheMap;
   private long expiry;
+  private Debouncer debouncer;
   public LRUCache(int capacity) {
     this(capacity, 1000 * 10);
   }
@@ -44,11 +46,25 @@ public class LRUCache<K, V> {
     return node.value;
   }
 
-  public void put(K key, V value) {
+  public V getAsync(K key, Fn0a<V> callback, long delay) { return getAsync(key, callback, delay, -1); }
+  public V getAsync(K key, Fn0a<V> callback, long delay, long expiry) {
+    V ret = null;
+    if (debouncer == null) { debouncer = new Debouncer(); }
+    if ((ret = this.get(key)) != null) {
+      debouncer.debounce(key, () -> put(key, callback.apply(), expiry), delay);
+    } else {
+      put(key, ret = callback.apply());
+    }
+    return ret;
+  }
+
+  public void put(K key, V value) { this.put(key, value, -1); }
+  public void put(K key, V value, long expiry) {
     Node<K, V> node = cacheMap.get(key);
     if (node != null) {
       node.value = value;
-      node.expire = System.currentTimeMillis() + this.expiry;
+      if (expiry <= 0) { expiry = this.expiry; }
+      node.expire = System.currentTimeMillis() + expiry;
       moveToHead(node);
       return;
     }
@@ -75,6 +91,11 @@ public class LRUCache<K, V> {
 
   public void dump() {
     cacheList.dump(capacity);
+  }
+
+  public void clear() {
+    cacheMap.clear();
+    cacheList.clear();
   }
 
   private void moveToHead(Node<K, V> node) {
@@ -204,5 +225,237 @@ public class LRUCache<K, V> {
         node = node.next;
       }
     }
+
+    public void clear() {
+      Node<K, V> node = head;
+      Node<K, V> tmp = null;
+      while (node != null) {
+        if (node.next == null) { break; }
+        tmp = node;
+        node = node.next;
+        tmp.next = null;
+        tmp.prev = null;
+      }
+      head = null;
+      tail = null;
+    }
   }
 }
+
+/** JAVASCRIPT IMPLEMENTATION */
+//   class LRUCache {
+//     capacity = 0;
+//     cacheList = [];
+//     cacheMap = {};
+//     handleMap = {};
+//     expiry = 0;
+//     constructor(capacity, expiry = 1000 * 10) {
+//       this.capacity = capacity;
+//       this.cacheList = new DoublyLinkedList();
+//       this.cacheMap = {};
+//       this.expiry = expiry;
+//     };
+//     get(key) {
+//       let node = this.cacheMap[key];
+//       if (node === undefined) { return undefined; };
+//       if (node.expire < new Date().getTime()) {
+//         this.remove(key);
+//         return undefined;
+//       };
+//       node.expire = new Date().getTime() + this.expiry;
+//       this.moveToHead(node);
+//       return node.value;
+//     };
+//     async getAsync(key, callback, delay, expiry = -1) {
+//       let ret = undefined;
+//       const self = this;
+//       if ((ret = self.get(key)) !== undefined) {
+//         if (self.handleMap[key]) { clearTimeout(self.handleMap[key]); };
+//         self.handleMap[key] = setTimeout(async function() { self.put(key, await callback(), expiry); }, delay);
+//       } else {
+//         self.put(key, ret = await callback());
+//       };
+//       return ret;
+//     };
+//     put(key, value, expiry = -1) {
+//       let node = this.cacheMap[key];
+//       if (node !== undefined) {
+//         node.value = value;
+//         node.expire - new Date().getTime() + this.expiry;
+//         this.moveToHead(node);
+//         return;
+//       };
+//       let newNode = new DoublyLinkedNode(key, value);
+//       this.cacheList.addFirst(newNode);
+//       if (!expiry) { expiry = this.expiry; };
+//       newNode.expire = new Date().getTime() + expiry;
+//       if (this.cacheList.size() > this.capacity) {
+//         this.removeLeast();
+//       }
+//       this.cacheMap[key] = newNode;
+//     };
+//     remove(key) {
+//       let node = this.cacheMap[key];
+//       delete this.cacheMap[key];
+//       if (node === undefined) { return; };
+//       this.cacheList.remove(node);
+//     };
+//     size() { return this.cacheList.size(); };
+//     // dump() { this.cacheList.dump(this.capacity); };
+//     moveToHead(node) {
+//       this.cacheList.remove(node);
+//       this.cacheList.addFirst(node);
+//     };
+//     removeLeast() {
+//       let size = this.cacheList.size();
+//       let tail = this.cacheList.removeLast();
+//       for (let inx = size; tail !== undefined && inx > this.capacity; inx--) {
+//         let prev = tail.prev;
+//         delete this.cacheMap[tail.key];
+//         this.cacheList.remove(tail);
+//         tail = prev;
+//       };
+//     };
+//     removeExpired() { this.cacheList.removeExpired(); };
+//     keySet() { return Object.keys(this.cacheMap); };
+//     keyIter() {
+//       let node = this.cacheList.head;
+//       return {
+//         hasNext() { return node !== undefined && node.next !== undefined; },
+//         next() {
+//           if (node === undefined) { return undefined; };
+//           let ret = node.key;
+//           node = node.next;
+//           return ret;
+//         }
+//       };
+//     };
+//     stringify() {
+//       return JSON.stringify(this.cacheList.dump());
+//     };
+//     parse(str) {
+//       let list =JSON.parse(str);
+//       let prev = undefined;
+//       let node = this.cacheList.head = this.cacheList.tail = undefined;
+//       for (const itm of list) {
+//         node = new DoublyLinkedNode(itm.k, itm.v);
+//         node.expire = Number(itm.t);
+//         if (prev === undefined) {
+//           this.cacheList.head = node;
+//         } else {
+//           prev.next = node;
+//         }
+//         node.prev = prev;
+//         this.cacheList.tail = node;
+//         this.cacheMap[itm.k] = node;
+//         prev = node;
+//       };
+//     };
+//   };
+//   class DoublyLinkedNode {
+//     key;
+//     value;
+//     prev;
+//     next;
+//     expire;
+//     constructor(key, value) {
+//       this.key = key;
+//       this.value = value;
+//     };
+//   };
+//   class DoublyLinkedList {
+//     head = undefined;
+//     tail = undefined;
+//     addFirst(node) {
+//       if (this.isEmpty()) {
+//         this.head = this.tail = node;
+//       } else {
+//         node.next = this.head;
+//         this.head.prev = node;
+//         this.head = node;
+//       };
+//     };
+//     remove(node) {
+//       if (node === this.head) {
+//         this.head = this.head.next;
+//         if (this.heead !== undefined) { this.head.prev = undefined; };
+//       } else if (node === this.tail) {
+//         this.tail = this.tail.prev;
+//         if (this.tail !== undefined) { this.tail.next = undefined; };
+//       };
+//       if (node.prev !== undefined) { node.prev.next = node.next; };
+//       if (node.next !== undefined) { node.next.prev = node.prev; };
+//       node.next = undefined;
+//       node.prev = undefined;
+//     };
+//     removeLast() {
+//       if (this.isEmpty()) { return; };
+//       let last = this.tail;
+//       this.remove(last);
+//       return last;
+//     };
+//     isEmpty() {
+//       return this.head === undefined;
+//     };
+//     removeExpired() {
+//       let node = this.tail;
+//       let prev = undefined;
+//       let curtime = new Date().getTime();
+//       LOOP: while (node !== undefined) {
+//         if (node.expire < curtime) {
+//           prev = node.prev;
+//           this.remove(node);
+//           node = prev;
+//           continue LOOP;
+//         }
+//         if (node.prev !== undefined) { break LOOP; }
+//         node = node.prev;
+//       };
+//     };
+//     size() {
+//       let size = 0;
+//       let node = this.head;
+//       while (node !== undefined) {
+//         size += 1;
+//         if (node.next === undefined) { break; };
+//         node = node.next;
+//       };
+//       return size;
+//     };
+//     // dump(limit) {
+//     //   let size = 0;
+//     //   let node = this.head;
+//     //   while (node !== undefined && size < limit) {
+//     //     log.debug("NODE:", node);
+//     //     size += 1;
+//     //     if (node.next === undefined) { break; };
+//     //     node = node.next;
+//     //   };
+//     // };
+//     dump() {
+//       let ret = "";
+//       // let size = 0;
+//       let node = this.head;
+//       let list = [];
+//       while (node !== undefined) {
+//         if (ret) { ret = `${ret},`; };
+//         let value = node.value;
+//         // if (typeof value === "string") {
+//         //   value = `s:${value}`;
+//         // } else if (typeof value === "number") {
+//         //   value = `n:${value}`;
+//         // } else {
+//         //   value = `o:${JSON.stringify(value)}`;
+//         // }
+//         // ret = `${ret}{"k":"${node.key}","v":"${value}","t":${node.expire}}`;
+//         list.push({ k: node.key, v: value, t: node.expire });
+//         // size += 1;
+//         if (node.next === undefined) { break; };
+//         node = node.next;
+//       };
+//       // if (ret) { ret = `[${ret}]`; };
+//       // if (list.length > 0) { ret = JSON.stringify(list); };
+//       // return ret;
+//       return list;
+//     };
+//   };

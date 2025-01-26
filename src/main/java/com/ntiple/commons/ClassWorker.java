@@ -15,6 +15,7 @@ import static com.ntiple.commons.StringUtil.strreplace;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
+import java.net.URL;
 import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -28,17 +29,32 @@ public class ClassWorker {
 
   private static final String getResourcePath(ClassLoader loader, String path) {
     String ret = "";
-    if (path == "") {
+    URL ruri = null;
+    String rpath = null;
+    if ("".equals(path)) {
       LOOP: for (int inx = 0; inx < 2; inx++) {
         try {
           switch (inx) { case 0: { path = "."; } break; case 1: { path = "/"; } break; }
-          ret = strreplace(String.valueOf(loader.getResource(path).getFile()), "\\", "/").replaceAll("^file:/", "/");
-          break LOOP;
+          ruri = loader.getResource(path);
+          log.trace("RURI:{}", ruri);
+          if (ruri != null) {
+            rpath = ruri.getFile();
+            ret = strreplace(String.valueOf(rpath), "\\", "/").replaceAll("^file:/", "/");
+            break LOOP;
+          }
         } catch (Exception e) { log.trace("", e); }
       }
     } else {
-      ret = strreplace(String.valueOf(loader.getResource(path).getFile()), "\\", "/").replaceAll("^file:/", "/");
+      try {
+        ruri = loader.getResource(path);
+        log.trace("RURI:{}", ruri);
+        if (ruri != null) {
+          rpath = ruri.getFile();
+          ret = strreplace(String.valueOf(rpath), "\\", "/").replaceAll("^file:/", "/");
+        }
+      } catch (Exception e) { log.trace("", e); }
     }
+    log.trace("GET-RESOURCE-PATH:{}", ret);
     if (PTN_WIN32FILEURL.matcher(ret).find()) { ret = ret.substring(1); }
     return ret;
   }
@@ -70,7 +86,6 @@ public class ClassWorker {
               log.trace("CLASS:{}", name);
               try {
                 callback.apply(Class.forName(name, false, loader));
-                // callback.apply(Class.forName(name));
                 break LOOP;
               } catch (Exception e) {
                 log.trace("E:", e);
@@ -118,7 +133,6 @@ public class ClassWorker {
                 log.trace("ENTRY:{}", ename);
                 try {
                   callback.apply(Class.forName(ename, false, loader));
-                  // callback.apply(Class.forName(ename));
                 } catch (Exception e) {
                   log.trace("E:", e);
                 }
