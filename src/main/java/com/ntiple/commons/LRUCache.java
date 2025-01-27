@@ -34,15 +34,16 @@ public class LRUCache<K, V> {
     this.cacheMap = new ConcurrentHashMap<>();
     this.expiry = expiry;
   }
-  public V get(K key) {
+  public V get(K key) { return get(key, -1); }
+  public V get(K key, long expiry) {
     Node<K, V> node = cacheMap.get(key);
     if (node == null) { return null; }
     if (node.expire < System.currentTimeMillis()) {
-      // log.debug("EXPIRED:{}", key, System.currentTimeMillis() - node.expire);
       remove(key);
       return null;
     }
-    node.expire = System.currentTimeMillis() + this.expiry;
+    if (expiry < 0) { expiry = this.expiry; }
+    node.expire = System.currentTimeMillis() + expiry;
     moveToHead(node);
     return node.value;
   }
@@ -51,10 +52,10 @@ public class LRUCache<K, V> {
   public V getAsync(K key, Fn0a<V> callback, long delay, long expiry) {
     V ret = null;
     synchronized(this) { if (debouncer == null) { debouncer = new Debouncer(); } }
-    if ((ret = this.get(key)) != null) {
+    if ((ret = this.get(key, 0)) != null) {
       debouncer.debounce(key, () -> put(key, callback.apply(), expiry), delay);
     } else {
-      put(key, ret = callback.apply());
+      put(key, ret = callback.apply(), expiry);
     }
     return ret;
   }
@@ -64,7 +65,7 @@ public class LRUCache<K, V> {
     Node<K, V> node = cacheMap.get(key);
     if (node != null) {
       node.value = value;
-      if (expiry <= 0) { expiry = this.expiry; }
+      if (expiry < 0) { expiry = this.expiry; }
       node.expire = System.currentTimeMillis() + expiry;
       moveToHead(node);
       return;
@@ -256,21 +257,22 @@ public class LRUCache<K, V> {
 //       this.cacheMap = {};
 //       this.expiry = expiry;
 //     };
-//     get(key) {
+//     get(key, expiry = -1) {
 //       let node = this.cacheMap[key];
 //       if (node === undefined) { return undefined; };
 //       if (node.expire < new Date().getTime()) {
 //         this.remove(key);
 //         return undefined;
 //       };
-//       node.expire = new Date().getTime() + this.expiry;
+//       if (expiry < 0) { expiry = this.expiry; };
+//       node.expire = new Date().getTime() + expiry;
 //       this.moveToHead(node);
 //       return node.value;
 //     };
 //     async getAsync(key, callback, delay, expiry = -1) {
 //       let ret = undefined;
 //       const self = this;
-//       if ((ret = self.get(key)) !== undefined) {
+//       if ((ret = self.get(key, 0)) !== undefined) {
 //         if (self.handleMap[key]) { clearTimeout(self.handleMap[key]); };
 //         self.handleMap[key] = setTimeout(async function() { self.put(key, await callback(), expiry); }, delay);
 //       } else {
