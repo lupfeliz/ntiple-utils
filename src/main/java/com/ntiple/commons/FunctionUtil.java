@@ -13,7 +13,7 @@ public class FunctionUtil {
   @FunctionalInterface public interface Fn2a<A1, A2, R> { public R apply(A1 a1, A2 a2); }
   @FunctionalInterface public interface Fn3a<A1, A2, A3, R> { public R apply(A1 a1, A2 a2, A3 a3); }
   @FunctionalInterface public interface Fn4a<A1, A2, A3, A4, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4); }
-  @FunctionalInterface public interface Fn5a<A1, A2, A3, A4, A5, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A4 a5); }
+  @FunctionalInterface public interface Fn5a<A1, A2, A3, A4, A5, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5); }
   @FunctionalInterface public interface Fn6a<A1, A2, A3, A4, A5, A6, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6); }
   @FunctionalInterface public interface Fn7a<A1, A2, A3, A4, A5, A6, A7, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7); }
   @FunctionalInterface public interface Fn8a<A1, A2, A3, A4, A5, A6, A7, A8, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8); }
@@ -25,7 +25,7 @@ public class FunctionUtil {
   @FunctionalInterface public interface Fn2av<A1, A2> { public void apply(A1 a1, A2 a2); }
   @FunctionalInterface public interface Fn3av<A1, A2, A3> { public void apply(A1 a1, A2 a2, A3 a3); }
   @FunctionalInterface public interface Fn4av<A1, A2, A3, A4> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4); }
-  @FunctionalInterface public interface Fn5av<A1, A2, A3, A4, A5> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4, A4 a5); }
+  @FunctionalInterface public interface Fn5av<A1, A2, A3, A4, A5> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5); }
   @FunctionalInterface public interface Fn6av<A1, A2, A3, A4, A5, A6> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6); }
   @FunctionalInterface public interface Fn7av<A1, A2, A3, A4, A5, A6, A7> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7); }
   @FunctionalInterface public interface Fn8av<A1, A2, A3, A4, A5, A6, A7, A8> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8); }
@@ -37,7 +37,7 @@ public class FunctionUtil {
   @FunctionalInterface public interface Fn2at<A1, A2, R> { public R apply(A1 a1, A2 a2) throws Exception; }
   @FunctionalInterface public interface Fn3at<A1, A2, A3, R> { public R apply(A1 a1, A2 a2, A3 a3) throws Exception; }
   @FunctionalInterface public interface Fn4at<A1, A2, A3, A4, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4) throws Exception; }
-  @FunctionalInterface public interface Fn5at<A1, A2, A3, A4, A5, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A4 a5) throws Exception; }
+  @FunctionalInterface public interface Fn5at<A1, A2, A3, A4, A5, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5) throws Exception; }
   @FunctionalInterface public interface Fn6at<A1, A2, A3, A4, A5, A6, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6) throws Exception; }
   @FunctionalInterface public interface Fn7at<A1, A2, A3, A4, A5, A6, A7, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7) throws Exception; }
   @FunctionalInterface public interface Fn8at<A1, A2, A3, A4, A5, A6, A7, A8, R> { public R apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8) throws Exception; }
@@ -49,7 +49,7 @@ public class FunctionUtil {
   @FunctionalInterface public interface Fn2avt<A1, A2> { public void apply(A1 a1, A2 a2) throws Exception; }
   @FunctionalInterface public interface Fn3avt<A1, A2, A3> { public void apply(A1 a1, A2 a2, A3 a3) throws Exception; }
   @FunctionalInterface public interface Fn4avt<A1, A2, A3, A4> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4) throws Exception; }
-  @FunctionalInterface public interface Fn5avt<A1, A2, A3, A4, A5> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4, A4 a5) throws Exception; }
+  @FunctionalInterface public interface Fn5avt<A1, A2, A3, A4, A5> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5) throws Exception; }
   @FunctionalInterface public interface Fn6avt<A1, A2, A3, A4, A5, A6> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6) throws Exception; }
   @FunctionalInterface public interface Fn7avt<A1, A2, A3, A4, A5, A6, A7> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7) throws Exception; }
   @FunctionalInterface public interface Fn8avt<A1, A2, A3, A4, A5, A6, A7, A8> { public void apply(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8) throws Exception; }

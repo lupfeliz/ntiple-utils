@@ -4,6 +4,10 @@
  * @Since       : 2024-03-07
  * @Description : gradle 빌드 파일
  * @Site        : https://devlog.ntiple.com
+ *
+ * 로컬 publish : gradlew clean build publishToMavenLocal
+ * maven central : https://central.sonatype.com/
+ * GPG sign : for file in `ls *.module; ls *.pom; ls *.jar`; do gpg -ab ${file}; done;
  **/
 plugins {
   id 'java'
@@ -12,7 +16,7 @@ plugins {
 }
 
 group = 'com.ntiple'
-version = '0.0.3-16'
+version = '0.0.3-17'
 
 java {
   sourceCompatibility = JavaVersion.VERSION_1_8

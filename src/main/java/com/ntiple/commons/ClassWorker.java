@@ -7,7 +7,6 @@
  **/
 package com.ntiple.commons;
 
-import static com.ntiple.commons.FunctionUtil.Fn1avt;
 import static com.ntiple.commons.IOUtil.safeclose;
 import static com.ntiple.commons.StringUtil.cat;
 import static com.ntiple.commons.StringUtil.strreplace;
@@ -20,6 +19,8 @@ import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
+
+import com.ntiple.commons.FunctionUtil.Fn1avt;
 
 public class ClassWorker {
   private static final SimpleLogger log = SimpleLogger.getLogger();
