@@ -37,7 +37,7 @@ public class ClassWorker {
         try {
           switch (inx) { case 0: { path = "."; } break; case 1: { path = "/"; } break; }
           ruri = loader.getResource(path);
-          log.trace("RURI:{}", ruri);
+          log.trace("RURI:{} / {} / {}", ruri, inx, path);
           if (ruri != null) {
             rpath = ruri.getFile();
             ret = strreplace(String.valueOf(rpath), "\\", "/").replaceAll("^file:/", "/");
@@ -48,14 +48,14 @@ public class ClassWorker {
     } else {
       try {
         ruri = loader.getResource(path);
-        log.trace("RURI:{}", ruri);
+        log.trace("RURI:{} / {}", ruri, path);
         if (ruri != null) {
           rpath = ruri.getFile();
           ret = strreplace(String.valueOf(rpath), "\\", "/").replaceAll("^file:/", "/");
         }
       } catch (Exception e) { log.trace("", e); }
     }
-    log.trace("GET-RESOURCE-PATH:{}", ret);
+    log.trace("GET-RESOURCE-PATH:{} / {}", ret, path);
     if (PTN_WIN32FILEURL.matcher(ret).find()) { ret = ret.substring(1); }
     return ret;
   }
@@ -162,7 +162,7 @@ public class ClassWorker {
         findClasses(loader, bpath, fpath, callback);
       }
     } catch (Exception e) {
-      log.debug("CANNOT ACCESS PACKAGE:{}{} / {}", "", pkgs, e.getMessage());
+      log.info("CANNOT ACCESS PACKAGE:{}{} / {}", "", pkgs, e);
     } finally {
       safeclose(reader);
     }
