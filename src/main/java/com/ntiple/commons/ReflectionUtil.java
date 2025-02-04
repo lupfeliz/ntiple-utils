@@ -11,9 +11,11 @@ import static com.ntiple.commons.StringUtil.camelCase;
 import static com.ntiple.commons.StringUtil.capitalize;
 import static com.ntiple.commons.StringUtil.cat;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.List;
 
 public class ReflectionUtil {
   private static final SimpleLogger log = SimpleLogger.getLogger();
@@ -24,12 +26,36 @@ public class ReflectionUtil {
   public static Class<?>[] UNARY_CLS_INT = new Class<?>[] { int.class };
   public static Class<?>[] UNARY_CLS_STRING = new Class<?>[] { String.class };
 
-
   public static final Class<?> findClass(String clsname) throws Exception { return Class.forName(clsname.trim()); }
   public static final Method findMethod(Class<?> cls, String name, Class<?>... arg) throws Exception {
     try { return cls.getDeclaredMethod(name.trim(), arg); } catch (Throwable ignore) { };
     try { return cls.getMethod(name.trim(), arg); } catch (Throwable ignore) { };
     return null;
+  }
+  public static final Method findMethod(Class<?> cls, String name) throws Exception {
+    Method ret = null;
+    if (name == null || "".equals(name)) { return ret; }
+    Method[] methods = null;
+    try {
+      methods = cls.getMethods();
+      for (int inx = 0; inx < methods.length; inx++) {
+        if (methods[inx].getName().equals(name)) {
+          ret = methods[inx];
+          break;
+        }
+      }
+    } catch (Throwable e) { log.trace("E:", e); }
+    if (ret != null) { return ret; }
+    try {
+      methods = cls.getDeclaredMethods();
+      for (int inx = 0; inx < methods.length; inx++) {
+        if (methods[inx].getName().equals(name)) {
+          ret = methods[inx];
+          break;
+        }
+      }
+    } catch (Throwable e) { log.trace("E:", e); }
+    return ret;
   }
   public static final Field findField(Class<?> cls, String name) throws Exception {
     try { return cls.getDeclaredField(name.trim()); } catch (Throwable ignore) { };
@@ -115,11 +141,21 @@ public class ReflectionUtil {
     return ret;
   }
 
+  public static Object[] newArray(Class<?> cls, int len) {
+    Object[] ret = null;
+    ret = cast(Array.newInstance(cls, len), ret);
+    return ret;
+  }
+  
+  public static Object[] toArray(List<?> lst, Class<?> cls) {
+    Object[] ret = newArray(cls, lst.size());
+    ret = lst.toArray(ret);
+    return ret;
+  }
+
   public static boolean isPrimeType(Object v) {
     return v == null ? false : isPrimeType(v.getClass());
   }
-
-
 
   @SuppressWarnings("unchecked")
   public static <T> T cast(Object from, T to) {

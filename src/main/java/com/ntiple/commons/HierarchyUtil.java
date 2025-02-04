@@ -35,7 +35,7 @@ public class HierarchyUtil {
         sub.add(itm);
         HierarchyEntry parent = cast(pmap.get(parentId), parent = null);
         parent.setChildren(sub);
-      } else {
+      } else if (parentId == null || "".equals(parentId)) {
         /** 부모노드가 없다면 루트아이템으로 인식. */
         working.add(itm);
       }
