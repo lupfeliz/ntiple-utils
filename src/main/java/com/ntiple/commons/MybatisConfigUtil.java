@@ -39,14 +39,16 @@ public class MybatisConfigUtil {
   private static Class<?> CLS_SQLSESSION_FACTORY_BEAN;
   private static Class<?> CLS_ALIAS;
   private static Class<?> CLS_TYPE_HANDLER;
-  private static Class<?> CLS_CONFIGURABLE_LISTABLE_BEAN_FACTORY;
   private static Class<?> CLS_RESOURCE;
   private static Class<?> CLS_APPLICATION_CONTEXT;
   private static Class<?> CLS_SQL_SESSION_FACTORY;
+  private static Class<?> CLS_PARAM;
 
   private static Constructor<?> CNS_SQLSESSION_FACTORY_BEAN;
   private static Constructor<?> CNS_RESOURCE_PATTERN_RESOLVER;
   private static Constructor<?> CNS_JNDI_DATA_SOURCE_LOOKUP;
+  private static Constructor<?> CNS_DATA_SOURCE_TRANSACTION_MANAGER;
+  private static Constructor<?> CNS_SQL_SESSION_TEMPLATE;
 
   private static Method MTD_GET_BEAN_FACTORY;
   private static Method MTD_GET_RESOURCE;
@@ -61,24 +63,37 @@ public class MybatisConfigUtil {
   private static Method MTD_SET_TYPE_ALIASES;
   private static Method MTD_SET_TYPE_HANDLERS;
   private static Method MTD_SET_MAPPER_LOCATIONS;
+  private static Method MTD_PARAM_VALUE;
+  private static Method MTD_SELECT_LIST;
+  private static Method MTD_SELECT_CURSOR;
+  private static Method MTD_SELECT_ONE;
+  private static Method MTD_UPDATE;
+  private static Method MTD_INSERT;
+  private static Method MTD_DELETE;
 
   static {
     try {
       CLS_SQLSESSION_FACTORY_BEAN = findClass("org.mybatis.spring.SqlSessionFactoryBean");
       CLS_ALIAS = findClass("org.apache.ibatis.type.Alias");
       CLS_TYPE_HANDLER = findClass("org.apache.ibatis.type.TypeHandler");
-      CLS_CONFIGURABLE_LISTABLE_BEAN_FACTORY = findClass("org.springframework.beans.factory.config.ConfigurableListableBeanFactory");
       CLS_RESOURCE = findClass("org.springframework.core.io.Resource");
       CLS_APPLICATION_CONTEXT = findClass("org.springframework.context.ApplicationContext");
       CLS_SQL_SESSION_FACTORY = findClass("org.apache.ibatis.session.SqlSessionFactory");
+      CLS_PARAM = findClass("org.apache.ibatis.annotations.Param");
 
+      Class<?> CLS_CONFIGURABLE_LISTABLE_BEAN_FACTORY = findClass("org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext");
       Class<?> CLS_RESOURCE_PATTERN_RESOLVER = findClass("org.springframework.core.io.support.ResourcePatternResolver");
       Class<?> CLS_PATH_MATCHING_RESOURCE_PATTERN_RESOLVER = findClass("org.springframework.core.io.support.PathMatchingResourcePatternResolver");
       Class<?> CLS_JNDI_DATA_SOURCE_LOOKUP = findClass("org.springframework.jdbc.datasource.lookup.JndiDataSourceLookup");
+      Class<?> CLS_DATA_SOURCE_TRANSACTION_MANAGER = findClass("org.springframework.jdbc.datasource.DataSourceTransactionManager");
+      Class<?> CLS_SQL_SESSION_TEMPLATE = findClass("org.mybatis.spring.SqlSessionTemplate");
+      Class<?> CLS_DEFAULT_LISTABLE_BEAN_FACTORY = findClass("org.springframework.beans.factory.support.DefaultListableBeanFactory");
 
       CNS_SQLSESSION_FACTORY_BEAN = findConstructor(CLS_SQLSESSION_FACTORY_BEAN);
       CNS_RESOURCE_PATTERN_RESOLVER = findConstructor(CLS_PATH_MATCHING_RESOURCE_PATTERN_RESOLVER);
       CNS_JNDI_DATA_SOURCE_LOOKUP = findConstructor(CLS_JNDI_DATA_SOURCE_LOOKUP);
+      CNS_DATA_SOURCE_TRANSACTION_MANAGER = findConstructor(CLS_DATA_SOURCE_TRANSACTION_MANAGER, new Class[] { DataSource.class });
+      CNS_SQL_SESSION_TEMPLATE = findConstructor(CLS_SQL_SESSION_TEMPLATE, new Class[] { CLS_SQL_SESSION_FACTORY });
 
       MTD_GET_BEAN_FACTORY = findMethod(CLS_CONFIGURABLE_LISTABLE_BEAN_FACTORY, "getBeanFactory", EMPTY_CLS);
       MTD_GET_RESOURCE = findMethod(CLS_APPLICATION_CONTEXT, "getResource", new Class[] { String.class });
@@ -87,12 +102,20 @@ public class MybatisConfigUtil {
       MTD_SET_DATA_SOURCE = findMethod(CLS_SQLSESSION_FACTORY_BEAN, "setDataSource", new Class[] { DataSource.class });
       MTD_SET_CONFIG_LOCATION = findMethod(CLS_SQLSESSION_FACTORY_BEAN, "setConfigLocation", new Class[] { CLS_RESOURCE });
       MTD_GET_SQLSESSION_FACTORY = findMethod(CLS_SQLSESSION_FACTORY_BEAN, "getObject", EMPTY_CLS);
-      MTD_REGISTER_SINGLETON = findMethod(CLS_CONFIGURABLE_LISTABLE_BEAN_FACTORY, "registerSingleton", new Class[] { String.class, Object.class });
-      MTD_REGISTER_RESOLVABLE_DEPENDENCY = findMethod(CLS_CONFIGURABLE_LISTABLE_BEAN_FACTORY, "registerResolvableDependency", new Class[] { Class.class, Object.class });
+      MTD_REGISTER_SINGLETON = findMethod(CLS_DEFAULT_LISTABLE_BEAN_FACTORY, "registerSingleton", new Class[] { String.class, Object.class });
+      MTD_REGISTER_RESOLVABLE_DEPENDENCY = findMethod(CLS_DEFAULT_LISTABLE_BEAN_FACTORY, "registerResolvableDependency", new Class[] { Class.class, Object.class });
       MTD_GET_JNDI_DATA_SOURCE = findMethod(CLS_JNDI_DATA_SOURCE_LOOKUP, "getDataSource", new Class[]{ String.class });
       MTD_SET_TYPE_ALIASES = findMethod(CLS_SQLSESSION_FACTORY_BEAN, "setTypeAliases");
       MTD_SET_TYPE_HANDLERS = findMethod(CLS_SQLSESSION_FACTORY_BEAN, "setTypeHandlers");
       MTD_SET_MAPPER_LOCATIONS = findMethod(CLS_SQLSESSION_FACTORY_BEAN, "setMapperLocations", new Class[] { newArray(CLS_RESOURCE, 0).getClass() });
+      MTD_PARAM_VALUE = findMethod(CLS_PARAM, "value", EMPTY_CLS);
+      MTD_SELECT_LIST = findMethod(CLS_SQL_SESSION_TEMPLATE, "selectList", new Class[] { String.class, Object.class });
+      MTD_SELECT_CURSOR = findMethod(CLS_SQL_SESSION_TEMPLATE, "selectCursor", new Class[] { String.class, Object.class });
+      MTD_SELECT_ONE = findMethod(CLS_SQL_SESSION_TEMPLATE, "selectOne", new Class[] { String.class, Object.class });
+      MTD_UPDATE = findMethod(CLS_SQL_SESSION_TEMPLATE, "update", new Class[] { String.class, Object.class });
+      MTD_INSERT = findMethod(CLS_SQL_SESSION_TEMPLATE, "insert", new Class[] { String.class, Object.class });
+      MTD_DELETE = findMethod(CLS_SQL_SESSION_TEMPLATE, "delete", new Class[] { String.class, Object.class });
+
     } catch (Throwable e) {
       log.info("E:{}", e.getMessage());
     }
@@ -171,16 +194,28 @@ public class MybatisConfigUtil {
   }
 
   public static Object configSqlSession(DataSource source,
+    Object self,
     Object appctx,
+    // Object beanFactory,
     String nameDatasrc,
     String nameSqlfctr,
     String nameSqltmpl,
     String nameSqltrnx,
+    Map<String, Object> defaultPrm,
     String pthMyaatis,
-    String ptnRsrc, String... pkgs) throws Exception {
-    // log.debug("================================================================================");
-    // log.debug("configSqlSession");
+    String ptnRsrc,
+    String... pkgs) throws Exception {
+    // ClassLoader loader = source.getClass().getClassLoader();
+    ClassLoader loader = self.getClass().getClassLoader();
+    log.debug("================================================================================");
     Object beanFactory = MTD_GET_BEAN_FACTORY.invoke(appctx, EMPTY_OBJ);
+    // Class<?>clsAppCtx = findClass(appctx.getClass().getName());
+    // Object beanFactory = findMethod(clsAppCtx, "getBeanFactory", EMPTY_CLS).invoke(appctx, EMPTY_OBJ);
+    // Class<?> clsBeanFacotry = beanFactory.getClass();
+    // MTD_REGISTER_SINGLETON = findMethod(clsBeanFacotry, "registerSingleton", new Class[] { String.class, Object.class });
+    // MTD_REGISTER_RESOLVABLE_DEPENDENCY = findMethod(clsBeanFacotry, "registerResolvableDependency", new Class[] { Class.class, Object.class });
+
+    log.debug("configSqlSession / {} / {}", appctx.getClass(), beanFactory.getClass());
     Object qsFactoryBean = CNS_SQLSESSION_FACTORY_BEAN.newInstance(EMPTY_OBJ);
     MTD_SET_DATA_SOURCE.invoke(qsFactoryBean, source);
     MTD_SET_CONFIG_LOCATION.invoke(qsFactoryBean, MTD_GET_RESOURCE.invoke(appctx, new Object[] { pthMyaatis }));
@@ -217,19 +252,21 @@ public class MybatisConfigUtil {
       mapperList.add(info);
       // log.debug("INFO:{}", info);
     }
-    applyTypeProcess(qsFactoryBean, source.getClass().getClassLoader(), pkgs);
+    applyTypeProcess(qsFactoryBean, loader, pkgs);
     Object qsfc = MTD_GET_SQLSESSION_FACTORY.invoke(qsFactoryBean, EMPTY_OBJ);
     {
       /** 트랜잭션 매니저 등록 */
-    //   beanFactory.registerSingleton(nameSqltrnx, new DataSourceTransactionManager(source));
+      MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqltrnx, CNS_DATA_SOURCE_TRANSACTION_MANAGER.newInstance(source) });
+      // beanFactory.registerSingleton(nameSqltrnx, new DataSourceTransactionManager(source));
       /** SQL 템플릴 생성 */
-    //   SqlSessionTemplate qstp = new SqlSessionTemplate(qsfc);
+      Object qstp = CNS_SQL_SESSION_TEMPLATE.newInstance(qsfc);
+      // SqlSessionTemplate qstp = new SqlSessionTemplate(qsfc);
       // log.debug("INFO:{}", mapperList);
       LOOP1: for (final MapperInfo info : mapperList) {
         try {
           /** SQL맵 생성 */
           Object bean = null;
-          Class<?> cls = findClass(info.className);
+          Class<?> cls = findClass(info.className, loader);
           // log.debug("MAPPER-CLASS:{}", cls, bean);
           LOOP2: for (Method method : cls.getMethods()) {
             String mname = method.getName();
@@ -240,6 +277,7 @@ public class MybatisConfigUtil {
             String[] params = new String[anns.length];
             for (int ainx = 0; ainx < anns.length; ainx++) {
               for (Annotation a : anns[ainx]) {
+                if (CLS_PARAM.isInstance(a)) { params[ainx] = cast(MTD_PARAM_VALUE.invoke(a, EMPTY_OBJ), ""); }
                 // if (a instanceof Param) { params[ainx] = ((Param) a).value(); }
               }
             }
@@ -256,11 +294,11 @@ public class MybatisConfigUtil {
             continue LOOP2;
           }
           bean = Proxy.newProxyInstance(cls.getClassLoader(), array(cls), (prx, mtd, arg) -> {
-            Object self = Thread.currentThread();
+            // Object self = Thread.currentThread();
             String mname = mtd.getName();
             // log.debug("EXECUTE:{} / {}", cls, mname);
             switch (mname) {
-            case "toString": { return self.toString(); }
+            case "toString": { return cat(cls.getName(), self.toString()); }
             case "equals": { return self.equals(arg[0]); }
             default: }
             String ns = cat(info.className, ".", mname);
@@ -268,27 +306,30 @@ public class MybatisConfigUtil {
             String qtype = info.methods.get(mname);
             String[] pnames = info.params.get(mname);
             if (qtype == null) { return null; }
+            if (defaultPrm != null) { pmap.putAll(defaultPrm); }
             for (int inx = 0; pnames != null && inx < pnames.length && inx < arg.length; inx++) { pmap.put(pnames[inx], arg[inx]); }
             Object res = null;
             switch (qtype) {
-    //         case "selectList": { res = qstp.selectList(ns, pmap); } break;
-    //         case "selectIter": { res = qstp.selectCursor(ns, pmap); } break;
-    //         case "select": { res = qstp.selectOne(ns, pmap); } break;
-    //         case "update": { res = qstp.update(ns, pmap); } break;
-    //         case "insert": { res = qstp.insert(ns, pmap); } break;
-    //         case "delete": { res = qstp.delete(ns, pmap); } break;
+            case "selectList": { res = MTD_SELECT_LIST.invoke(qstp, new Object[] { ns, pmap }); } break;
+            case "selectIter": { res = MTD_SELECT_CURSOR.invoke(qstp, new Object[] { ns, pmap }); } break;
+            case "select": { res = MTD_SELECT_ONE.invoke(qstp, new Object[] { ns, pmap }); } break;
+            case "update": { res = MTD_UPDATE.invoke(qstp, new Object[] { ns, pmap }); } break;
+            case "insert": { res = MTD_INSERT.invoke(qstp, new Object[] { ns, pmap }); } break;
+            case "delete": { res = MTD_DELETE.invoke(qstp, new Object[] { ns, pmap }); } break;
             default: }
             return res;
           });
           // log.debug("CHECK:{} / {} / {}", cls.isInstance(bean), bean, bean.getClass());
           /** SQL맵 등록 */
           log.debug("REGISTER-BEAN:{} / {}", cls, bean);
-    //       beanFactory.registerResolvableDependency(cls, bean);
+          MTD_REGISTER_RESOLVABLE_DEPENDENCY.invoke(beanFactory, new Object[] { cls, bean });
+          // beanFactory.registerResolvableDependency(cls, bean);
         } catch (Exception e) { log.info("E:", e); }
         continue LOOP1;
       }
       /** SQL 템플릴 등록 */
-    //   beanFactory.registerSingleton(nameSqltmpl, qstp);
+      MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqltmpl, qstp });
+      // beanFactory.registerSingleton(nameSqltmpl, qstp);
     }
     return qsfc;
   }

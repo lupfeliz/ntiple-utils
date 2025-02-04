@@ -27,6 +27,7 @@ public class ReflectionUtil {
   public static Class<?>[] UNARY_CLS_STRING = new Class<?>[] { String.class };
 
   public static final Class<?> findClass(String clsname) throws Exception { return Class.forName(clsname.trim()); }
+  public static final Class<?> findClass(String clsname, ClassLoader loader) throws Exception { return Class.forName(clsname.trim(), true, loader); }
   public static final Method findMethod(Class<?> cls, String name, Class<?>... arg) throws Exception {
     try { return cls.getDeclaredMethod(name.trim(), arg); } catch (Throwable ignore) { };
     try { return cls.getMethod(name.trim(), arg); } catch (Throwable ignore) { };
