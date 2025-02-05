@@ -1002,6 +1002,8 @@ public class ConvertUtil {
     return ret;
   }
 
+  public static <T> T arraySet(T[] arr, int inx, T v) { return arr[inx] = v; }
+
   public static List<String> attrAsList(List<?> lst, String colname) { return attrAsList(lst, colname, String.class); }
 
   public static <O> List<O> attrAsList(List<?> lst, String colname, Class<O> cls) {

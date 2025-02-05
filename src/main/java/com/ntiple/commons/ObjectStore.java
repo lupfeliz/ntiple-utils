@@ -7,10 +7,21 @@
  **/
 package com.ntiple.commons;
 
+import com.ntiple.commons.FunctionUtil.Fn0a;
+
 public class ObjectStore<T> {
   private T v;
   public ObjectStore() { };
   public ObjectStore(T v) { this.v = v; }
   public T get() { return v; }
-  public void set(T v) { this.v = v; }
+  public T set(T v) { return (this.v = v); }
+  public T getAsync(Fn0a<T> cb) {
+    T ret = null;
+    if (v != null) {
+      ret = v;
+    } else {
+      ret = v = cb.apply();
+    }
+    return ret;
+  }
 }

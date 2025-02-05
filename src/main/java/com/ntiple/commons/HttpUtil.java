@@ -456,7 +456,7 @@ public class HttpUtil {
       if (entity != null) {
         ret = reader(cast(HttpEntityGetContent.invoke(entity, EMPTY_OBJ), InputStream.class), enc);
       }
-    } catch (Exception e) { log.debug("E:", e); }
+    } catch (Exception e) { log.info("E:", e); }
     return ret;
   }
 
@@ -503,7 +503,7 @@ public class HttpUtil {
         Object val = RequestGetAttribute.invoke(request, key);
         ret.put(key, val);
       }
-    } catch (Exception e) { log.debug("E:", e); }
+    } catch (Exception e) { log.info("E:", e); }
     return ret;
   }
 
@@ -967,7 +967,7 @@ public class HttpUtil {
             if ("content-type".equals(key) && value != null && !"".equals(value)) {
               String[] data = value.split(";");
               ctype = data[0].toLowerCase().trim();
-              if (data.length > 0 && (mat = PTN_CHARSET.matcher(data[1])) != null && mat.find()) {
+              if (data.length > 1 && (mat = PTN_CHARSET.matcher(data[1])) != null && mat.find()) {
                 chset = mat.group("chset");
               }
             }
@@ -1035,7 +1035,7 @@ public class HttpUtil {
           ret = cast(callable.apply(state, istream, headerMap, this.context), ret);
         } break SW1; }
       } catch (Exception e) {
-        log.debug("E:{}", e);
+        log.info("E:{}", e);
       } finally {
         safeclose(istream);
       }
