@@ -8,11 +8,14 @@
 package com.ntiple.commons;
 
 import static com.ntiple.commons.ConvertUtil.parseInt;
+import static com.ntiple.commons.IOUtil.safeclose;
 import static com.ntiple.commons.ReflectionUtil.cast;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.InputStream;
 import java.io.Reader;
+import java.io.StringReader;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -118,14 +121,24 @@ public class XMLWorker {
     Map<String, Object> ctx) throws Exception {
     SAXParser parser = xmlParser(config);
     DefaultHandler handler = xmlHandler(startElement, endElement, characters, ctx);
-    if (source instanceof File) {
+    Closeable cl = null;
+    if (source instanceof String) {
+      StringReader reader = new StringReader(cast(source, ""));
+      parser.parse(new InputSource(reader), handler);
+      cl = reader;
+    } else if (source instanceof File) {
       parser.parse(cast(source, File.class), handler);
     } else if (source instanceof InputStream) {
-      parser.parse(cast(source, InputStream.class), handler);
+      InputStream istream = cast(source, istream = null);
+      parser.parse(istream, handler);
+      cl = istream;
     } else if (source instanceof Reader) {
-      parser.parse(new InputSource(cast(source, Reader.class)), handler);
+      Reader reader = cast(source, reader = null);
+      parser.parse(new InputSource(reader), handler);
+      cl = reader;
     } else {
       throw new RuntimeException("XML SOURCE NOT RECOGNIZED.");
     }
+    safeclose(cl);
   }
 }
