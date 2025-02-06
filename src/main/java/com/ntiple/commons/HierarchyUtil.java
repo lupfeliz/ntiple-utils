@@ -15,13 +15,15 @@ import java.util.List;
 import java.util.Map;
 
 public class HierarchyUtil {
-  public static <T extends HierarchyEntry<?>> List<T> makeHierarchy(List<T> list) { return makeHierarchy(list, null); }
+  public static <T extends HierarchyEntry<?>> List<T> makeHierarchy(List<T> list) { return makeHierarchy(list, null, null); }
+  public static <T extends HierarchyEntry<?>> List<T> makeHierarchy(List<T> list, Map<String, T> pmap) { return makeHierarchy(list, pmap, null); }
   @SuppressWarnings({ "rawtypes", "unchecked" })
-  public static <T extends HierarchyEntry<?>> List<T> makeHierarchy(List<T> list, Map<String, T> pmap) {
+  public static <T extends HierarchyEntry<?>> List<T> makeHierarchy(List<T> list, Map<String, T> pmap, Map<String, Object> opt) {
     List<T> ret = new ArrayList<>();
     Map<String, List<T>> submap = new LinkedHashMap<>();
     List<T> working = new ArrayList<>();
     if (pmap == null) { pmap = new LinkedHashMap<>(); }
+    if (opt == null) { opt = new LinkedHashMap<>(); }
     /** 1차 LOOP 맵생성 */
     for (T itm : list) {
       pmap.put(itm.getEntryId(), itm);
@@ -35,7 +37,7 @@ public class HierarchyUtil {
         sub.add(itm);
         HierarchyEntry parent = cast(pmap.get(parentId), parent = null);
         parent.setChildren(sub);
-      } else if (parentId == null || "".equals(parentId)) {
+      } else if ((parentId == null || "".equals(parentId)) || (parentId != null && parentId.equals(opt.get("rootpid")))) {
         /** 부모노드가 없다면 루트아이템으로 인식. */
         working.add(itm);
       }

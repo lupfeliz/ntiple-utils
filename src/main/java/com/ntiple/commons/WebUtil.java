@@ -93,7 +93,7 @@ public class WebUtil {
     if (RequestContextHolder == null) { return ret; }
     try {
       Object attr = RequestContextHolderGetRequestAttributes.invoke(null, EMPTY_OBJ);
-      ret = ServletRequestAttributesGetRequest.invoke(attr, EMPTY_OBJ);
+      if (attr != null) { ret = ServletRequestAttributesGetRequest.invoke(attr, EMPTY_OBJ); }
     } catch (Exception ignore) { log.debug("E:{}", ignore); }
     return ret;
   }

@@ -126,6 +126,10 @@ public class LRUCache<K, V> {
     }
   }
 
+  public int size() {
+    return cacheList.size();
+  }
+
   public Set<K> keySet() { return cacheMap.keySet(); }
   public Iterator<K> keyIter() {
     return new Iterator<K>() {
@@ -167,6 +171,7 @@ public class LRUCache<K, V> {
     }
 
     public void remove(Node<K, V> node) {
+      if (node == null) { return; }
       if (node == head) {
         head = head.next;
         if (head != null) { head.prev = null; }
@@ -193,7 +198,7 @@ public class LRUCache<K, V> {
       Node<K, V> node = tail;
       Node<K, V> prev = null;
       long curtime = System.currentTimeMillis();
-      LOOP: while (node != null) {
+      LOOP: while(node != null) {
         if (node.expire < curtime) {
           prev = node.prev;
           remove(node);

@@ -108,6 +108,19 @@ public class ValuesUtil {
     return String.valueOf(ret);
   }
 
+  public static final boolean ne(Object a, Object b) { return !eq(a, b); }
+  public static final boolean eq(Object a, Object b) {
+    boolean ret = false;
+    if (a == null && b == null) {
+      ret = true;
+    } else if (a != null && b != null) {
+      ret = a.equals(b);
+    } else {
+      ret = false;
+    }
+    return ret;
+  }
+
   public static String quot(String str) {
     String ret = str;
     Matcher mat = PTN_QUOT.matcher(ret);

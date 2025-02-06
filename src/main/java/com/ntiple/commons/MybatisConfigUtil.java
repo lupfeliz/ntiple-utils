@@ -81,7 +81,7 @@ public class MybatisConfigUtil {
       CLS_SQL_SESSION_FACTORY = findClass("org.apache.ibatis.session.SqlSessionFactory");
       CLS_PARAM = findClass("org.apache.ibatis.annotations.Param");
 
-      Class<?> CLS_CONFIGURABLE_LISTABLE_BEAN_FACTORY = findClass("org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext");
+      Class<?> CLS_CONFIGURABLE_LISTABLE_BEAN_FACTORY = findClass("org.springframework.context.support.GenericApplicationContext");
       Class<?> CLS_RESOURCE_PATTERN_RESOLVER = findClass("org.springframework.core.io.support.ResourcePatternResolver");
       Class<?> CLS_PATH_MATCHING_RESOURCE_PATTERN_RESOLVER = findClass("org.springframework.core.io.support.PathMatchingResourcePatternResolver");
       Class<?> CLS_JNDI_DATA_SOURCE_LOOKUP = findClass("org.springframework.jdbc.datasource.lookup.JndiDataSourceLookup");
@@ -134,19 +134,22 @@ public class MybatisConfigUtil {
       lookup = CNS_JNDI_DATA_SOURCE_LOOKUP.newInstance(EMPTY_OBJ);
     } catch (Exception e) {
       log.info("E:{}", e.getMessage());
+      ret = null;
     }
     if (ret == null) {
       try {
         ret = cast(MTD_GET_JNDI_DATA_SOURCE.invoke(lookup, new Object[] { cat("java:/comp/env/jdbc/", jndiName) }), ret = null);
-      } catch (Exception e) {
+      } catch (Throwable e) {
         log.info("E: java:/comp/env/jdbc/{} NOT FOUND", jndiName, e.getMessage());
+        ret = null;
       }
     }
     if (ret == null) {
       try {
         ret = cast(MTD_GET_JNDI_DATA_SOURCE.invoke(lookup, new Object[] { cat("java:/jdbc/", jndiName) }), ret = null);
-      } catch (Exception e) {
+      } catch (Throwable e) {
         log.info("E: java:/jdbc/{} NOT FOUND", jndiName, e.getMessage());
+        ret = null;
       }
     }
     return ret;
@@ -255,7 +258,11 @@ public class MybatisConfigUtil {
     applyTypeProcess(qsFactoryBean, loader, pkgs);
     Object qsfc = MTD_GET_SQLSESSION_FACTORY.invoke(qsFactoryBean, EMPTY_OBJ);
     {
+      /** SQL팩토리 등록 */
+      log.debug("REGISTER-BEAN:{} / {}", nameSqlfctr, qsfc);
+      MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqlfctr, qsfc });
       /** 트랜잭션 매니저 등록 */
+      log.debug("REGISTER-BEAN:{} / {}", nameSqltrnx);
       MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqltrnx, CNS_DATA_SOURCE_TRANSACTION_MANAGER.newInstance(source) });
       // beanFactory.registerSingleton(nameSqltrnx, new DataSourceTransactionManager(source));
       /** SQL 템플릴 생성 */
@@ -328,6 +335,7 @@ public class MybatisConfigUtil {
         continue LOOP1;
       }
       /** SQL 템플릴 등록 */
+      log.debug("REGISTER-BEAN:{} / {}", nameSqltmpl, qstp);
       MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqltmpl, qstp });
       // beanFactory.registerSingleton(nameSqltmpl, qstp);
     }
