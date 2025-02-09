@@ -37,7 +37,7 @@ import javax.sql.DataSource;
 import com.ntiple.commons.FunctionUtil.Fn1at;
 import com.ntiple.commons.FunctionUtil.Fn2at;
 
-public class MybatisConfigUtil {
+public class MybatisSpringbootUtil {
   private static final SimpleLogger log = SimpleLogger.getLogger();
 
   private static Class<?> CLS_SQLSESSION_FACTORY_BEAN;
