@@ -127,6 +127,7 @@ public class MybatisConfigUtil {
 
   private static class MapperInfo {
     private String className;
+    private Class<?> cls;
     private Map<String, String> methods = new LinkedHashMap<>();
     private Map<String, String[]> params = new LinkedHashMap<>();
   }
@@ -256,6 +257,33 @@ public class MybatisConfigUtil {
         } finally { safeclose(istream); }
         mapperList.add(info);
       }
+      LOOP1: for (final MapperInfo info : mapperList) {
+        try {
+          /** SQL맵 생성 */
+          Class<?> cls = info.cls = findClass(info.className, loader);
+          LOOP2: for (Method method : cls.getMethods()) {
+            String mname = method.getName();
+            String qtype = info.methods.get(mname);
+            if (qtype == null) { continue LOOP2; }
+            Class<?> rtype = method.getReturnType();
+            Annotation[][] anns = method.getParameterAnnotations();
+            String[] params = new String[anns.length];
+            for (int ainx = 0; ainx < anns.length; ainx++) {
+              for (Annotation a : anns[ainx]) {
+                if (CLS_PARAM.isInstance(a)) { params[ainx] = cast(MTD_PARAM_VALUE.invoke(a, EMPTY_OBJ), ""); }
+              }
+            }
+            info.params.put(mname, params);
+            if (List.class.isAssignableFrom(rtype) && "select".equals(qtype)) {
+              info.methods.put(mname, "selectList");
+            } else if (Iterable.class.isAssignableFrom(rtype) && "select".equals(qtype)) {
+              info.methods.put(mname, "selectIter");
+            }
+            continue LOOP2;
+          }
+        } catch (Exception e) { log.info("E:", e); }
+        continue LOOP1;
+      }
       applyTypeProcess(qsFactoryBean, loader, pkgs);
       ret = (appctx, source) -> {
         MTD_SET_DATA_SOURCE.invoke(qsFactoryBean, source);
@@ -278,30 +306,9 @@ public class MybatisConfigUtil {
         LOOP1: for (final MapperInfo info : mapperList) {
           try {
             /** SQL맵 생성 */
-            Object bean = null;
-            Class<?> cls = findClass(info.className, loader);
-            LOOP2: for (Method method : cls.getMethods()) {
-              String mname = method.getName();
-              String qtype = info.methods.get(mname);
-              if (qtype == null) { continue LOOP2; }
-              Class<?> rtype = method.getReturnType();
-              Annotation[][] anns = method.getParameterAnnotations();
-              String[] params = new String[anns.length];
-              for (int ainx = 0; ainx < anns.length; ainx++) {
-                for (Annotation a : anns[ainx]) {
-                  if (CLS_PARAM.isInstance(a)) { params[ainx] = cast(MTD_PARAM_VALUE.invoke(a, EMPTY_OBJ), ""); }
-                }
-              }
-              info.params.put(mname, params);
-              if (List.class.isAssignableFrom(rtype) && "select".equals(qtype)) {
-                info.methods.put(mname, "selectList");
-              } else if (Iterable.class.isAssignableFrom(rtype) && "select".equals(qtype)) {
-                info.methods.put(mname, "selectIter");
-              }
-              continue LOOP2;
-            }
             Object inst = new Object();
-            bean = Proxy.newProxyInstance(cls.getClassLoader(), array(cls), (prx, mtd, arg) -> {
+            Class<?> cls = info.cls;
+            Object bean = Proxy.newProxyInstance(cls.getClassLoader(), array(cls), (prx, mtd, arg) -> {
               String mname = mtd.getName();
               switch (mname) {
               case "toString": { return cat(cls.getName(), inst.toString()); }
