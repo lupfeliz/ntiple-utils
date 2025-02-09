@@ -150,13 +150,13 @@ public class HttpUtil {
     /** for javax.servlet package (JDK 1.8 ver)  */
       try {
         HttpServletRequest = findClass("javax.servlet.http.HttpServletRequest");
-      } catch (Throwable ignore) { log.debug("E:{}", ignore); }
+      } catch (Throwable e) { log.debug("E:{}", e.getMessage()); }
     }
     /** for jakarta package (over JDK 1.8 ver)  */
     if (HttpServletRequest == null) {
       try {
         HttpServletRequest = findClass("jakarta.servlet.http.HttpServletRequest");
-      } catch (Throwable ignore) { log.debug("E:{}", ignore); }
+      } catch (Throwable e) { log.debug("E:{}", e.getMessage()); }
     }
     try {
       HttpHost = findClass("org.apache.http.HttpHost");
@@ -286,7 +286,7 @@ public class HttpUtil {
         reg = regRegister.invoke(reg, array(S_HTTPS, sslcon));
         connectionManager = findConstructor(PoolingHttpClientConnectionManager, array(Registry)).newInstance(sslBuild.invoke(reg));
       }
-    } catch (Throwable ignore) { log.debug("E:{}", ignore); }
+    } catch (Throwable e) { log.debug("E:{}", e.getMessage()); }
     try {
       Class<?> JHttpBodyHandler = findClass("java.net.http.HttpResponse$BodyHandler");
       Class<?> JHttpBodyHandlers = findClass("java.net.http.HttpResponse$BodyHandlers");
@@ -300,7 +300,7 @@ public class HttpUtil {
       JHttpClientSend = findMethod(JHttpClient, "send", array(JHttpRequest, JHttpBodyHandler));
       JHttpResponseInputStream = findMethod(JHttpBodyHandlers, "ofInputStream", EMPTY_CLS);
       System.setProperty("jdk.httpclient.allowRestrictedHeaders", "connection,content-length,host,upgrade");
-    } catch (Throwable ignore) { log.debug("E:{}", ignore); }
+    } catch (Throwable e) { log.debug("E:{}", e.getMessage()); }
     try {
       Class<?> MultipartEntityBuilder = findClass("org.apache.http.entity.mime.MultipartEntityBuilder");
       Class<?> ContentType = findClass("org.apache.http.entity.ContentType");
@@ -310,7 +310,7 @@ public class HttpUtil {
       MultipartEntityBuilderAddTextBody = findMethod(MultipartEntityBuilder, "addTextBody", array(String.class, String.class, ContentType)) ;
       MultipartEntityBuilderBuild = findMethod(MultipartEntityBuilder, "build", EMPTY_CLS);
       MultipartTypeDefault = findFieldValue(ContentType, "DEFAULT_BINARY");
-    } catch (Throwable ignore) { log.debug("E:{}", ignore); }
+    } catch (Throwable e) { log.debug("E:{}", e.getMessage()); }
     log.setLevel(logLevel);
   }
 
