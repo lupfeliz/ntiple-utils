@@ -10,6 +10,7 @@ package com.ntiple.commons;
 import static com.ntiple.commons.ConvertUtil.array;
 import static com.ntiple.commons.IOUtil.readAsString;
 import static com.ntiple.commons.IOUtil.safeclose;
+import static com.ntiple.commons.ProcUtil.sleep;
 import static com.ntiple.commons.ReflectionUtil.cast;
 import static com.ntiple.commons.ReflectionUtil.EMPTY_CLS;
 import static com.ntiple.commons.ReflectionUtil.EMPTY_OBJ;
@@ -35,7 +36,6 @@ import java.util.Map;
 import javax.sql.DataSource;
 
 import com.ntiple.commons.FunctionUtil.Fn1at;
-import com.ntiple.commons.FunctionUtil.Fn2at;
 
 public class MybatisSpringbootUtil {
   private static final SimpleLogger log = SimpleLogger.getLogger();
@@ -201,7 +201,12 @@ public class MybatisSpringbootUtil {
     }
   }
 
-  public static Fn2at<Object, DataSource, Object> configSqlSession(
+  public static interface ORMRegsitrator {
+    public void setDataSource(Object appctx, DataSource source) throws Exception;
+    public void registMappers(Object appctx) throws Exception;
+  }
+
+  public static ORMRegsitrator configSqlSession(
     Class<?> selfCls,
     String nameDatasrc, String nameSqlfctr, String nameSqltmpl, String nameSqltrnx,
     Map<String, Object> defaultPrm,
@@ -211,13 +216,13 @@ public class MybatisSpringbootUtil {
       nameDatasrc, nameSqlfctr, nameSqltmpl, nameSqltrnx,
       defaultPrm, pthMyaatis, ptnRsrc, pkgs, null);
   }
-  public static Fn2at<Object, DataSource, Object> configSqlSession(
+  public static ORMRegsitrator configSqlSession(
     Class<?> selfCls,
     String nameDatasrc, String nameSqlfctr, String nameSqltmpl, String nameSqltrnx,
     Map<String, Object> defaultPrm,
     String pthMyaatis, String ptnRsrc,
     String[] pkgs, Fn1at<String, String> xmltr) {
-    Fn2at<Object, DataSource, Object> ret = null;
+    ORMRegsitrator ret = null;
     try {
       ClassLoader loader = selfCls.getClassLoader();
       Object qsFactoryBean = CNS_SQLSESSION_FACTORY_BEAN.newInstance(EMPTY_OBJ);
@@ -285,66 +290,76 @@ public class MybatisSpringbootUtil {
         continue LOOP1;
       }
       applyTypeProcess(qsFactoryBean, loader, pkgs);
-      ret = (appctx, source) -> {
-        MTD_SET_DATA_SOURCE.invoke(qsFactoryBean, source);
-        Object beanFactory = MTD_GET_BEAN_FACTORY.invoke(appctx, EMPTY_OBJ);
-        log.debug("configSqlSession / {} / {}", appctx.getClass(), beanFactory.getClass());
-        MTD_SET_CONFIG_LOCATION.invoke(qsFactoryBean, MTD_GET_RESOURCE.invoke(appctx, new Object[] { pthMyaatis }));
-        Object qsfc = MTD_GET_SQLSESSION_FACTORY.invoke(qsFactoryBean, EMPTY_OBJ);
-        /** SQL팩토리 등록 */
-        if (nameSqlfctr != null && !"".equals(nameSqlfctr)) {
-          // log.debug("REGISTER-BEAN:{} / {}", nameSqlfctr, qsfc);
-          MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqlfctr, qsfc });
-        }
-        /** 트랜잭션 매니저 등록 */
-        if (nameSqltrnx != null && !"".equals(nameSqltrnx)) {
-          log.debug("REGISTER-BEAN:{} / {}", nameSqltrnx);
-          MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqltrnx, CNS_DATA_SOURCE_TRANSACTION_MANAGER.newInstance(source) });
-        }
-        /** SQL 템플릴 생성 */
-        Object qstp = CNS_SQL_SESSION_TEMPLATE.newInstance(qsfc);
-        LOOP1: for (final MapperInfo info : mapperList) {
-          try {
-            /** SQL맵 생성 */
-            Object inst = new Object();
-            Class<?> cls = info.cls;
-            Object bean = Proxy.newProxyInstance(cls.getClassLoader(), array(cls), (prx, mtd, arg) -> {
-              String mname = mtd.getName();
-              switch (mname) {
-              case "toString": { return cat(cls.getName(), inst.toString()); }
-              case "equals": { return inst.equals(arg[0]); }
-              default: }
-              String ns = cat(info.className, ".", mname);
-              Map<String, Object> pmap = new LinkedHashMap<>();
-              String qtype = info.methods.get(mname);
-              String[] pnames = info.params.get(mname);
-              if (qtype == null) { return null; }
-              if (defaultPrm != null) { pmap.putAll(defaultPrm); }
-              for (int inx = 0; pnames != null && inx < pnames.length && inx < arg.length; inx++) { pmap.put(pnames[inx], arg[inx]); }
-              Object res = null;
-              switch (qtype) {
-              case "selectList": { res = MTD_SELECT_LIST.invoke(qstp, new Object[] { ns, pmap }); } break;
-              case "selectIter": { res = MTD_SELECT_CURSOR.invoke(qstp, new Object[] { ns, pmap }); } break;
-              case "select": { res = MTD_SELECT_ONE.invoke(qstp, new Object[] { ns, pmap }); } break;
-              case "update": { res = MTD_UPDATE.invoke(qstp, new Object[] { ns, pmap }); } break;
-              case "insert": { res = MTD_INSERT.invoke(qstp, new Object[] { ns, pmap }); } break;
-              case "delete": { res = MTD_DELETE.invoke(qstp, new Object[] { ns, pmap }); } break;
-              default: }
-              return res;
-            });
-            /** SQL맵 등록 */
-            log.debug("REGISTER-BEAN:{} / {}", cls, bean);
-            MTD_REGISTER_RESOLVABLE_DEPENDENCY.invoke(beanFactory, new Object[] { cls, bean });
-          } catch (Exception e) { log.info("E:", e); }
-          continue LOOP1;
-        }
-        /** SQL 템플릴 등록 */
-        if (nameSqltmpl != null && !"".equals(nameSqltmpl)) {
-          log.debug("REGISTER-BEAN:{} / {}", nameSqltmpl, qstp);
-          MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqltmpl, qstp });
-        }
-        return qsfc;
+      Object[] QSTP = new Object[1];
+      ret = new ORMRegsitrator() {
+				@Override public void setDataSource(Object appctx, DataSource source) throws Exception {
+          MTD_SET_DATA_SOURCE.invoke(qsFactoryBean, source);
+          Object beanFactory = MTD_GET_BEAN_FACTORY.invoke(appctx, EMPTY_OBJ);
+          log.debug("configSqlSession / {} / {}", appctx.getClass(), beanFactory.getClass());
+          MTD_SET_CONFIG_LOCATION.invoke(qsFactoryBean, MTD_GET_RESOURCE.invoke(appctx, new Object[] { pthMyaatis }));
+          Object qsfc = MTD_GET_SQLSESSION_FACTORY.invoke(qsFactoryBean, EMPTY_OBJ);
+          /** SQL팩토리 등록 */
+          if (nameSqlfctr != null && !"".equals(nameSqlfctr)) {
+            // log.debug("REGISTER-BEAN:{} / {}", nameSqlfctr, qsfc);
+            MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqlfctr, qsfc });
+          }
+          /** 트랜잭션 매니저 등록 */
+          if (nameSqltrnx != null && !"".equals(nameSqltrnx)) {
+            log.debug("REGISTER-BEAN:{} / {}", nameSqltrnx);
+            MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqltrnx, CNS_DATA_SOURCE_TRANSACTION_MANAGER.newInstance(source) });
+          }
+          /** SQL 템플릴 생성 */
+          Object qstp = QSTP[0] = CNS_SQL_SESSION_TEMPLATE.newInstance(qsfc);
+          /** SQL 템플릴 등록 */
+          if (nameSqltmpl != null && !"".equals(nameSqltmpl)) {
+            log.debug("REGISTER-BEAN:{} / {}", nameSqltmpl, qstp);
+            MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqltmpl, qstp });
+          }
+				}
+				@Override public void registMappers(Object appctx) throws Exception {
+          Object beanFactory = MTD_GET_BEAN_FACTORY.invoke(appctx, EMPTY_OBJ);
+          LOOP1: for (final MapperInfo info : mapperList) {
+            try {
+              /** SQL맵 생성 */
+              Object inst = new Object();
+              Class<?> cls = info.cls;
+              Object bean = Proxy.newProxyInstance(cls.getClassLoader(), array(cls), (prx, mtd, arg) -> {
+                String mname = mtd.getName();
+                switch (mname) {
+                case "toString": { return cat(cls.getName(), inst.toString()); }
+                case "equals": { return inst.equals(arg[0]); }
+                default: }
+                String ns = cat(info.className, ".", mname);
+                Map<String, Object> pmap = new LinkedHashMap<>();
+                String qtype = info.methods.get(mname);
+                String[] pnames = info.params.get(mname);
+                if (qtype == null) { return null; }
+                if (defaultPrm != null) { pmap.putAll(defaultPrm); }
+                for (int inx = 0; pnames != null && inx < pnames.length && inx < arg.length; inx++) { pmap.put(pnames[inx], arg[inx]); }
+                Object res = null;
+                for (int retry = 0; retry < 10; retry++) {
+                  if (QSTP[0] != null) { break; }
+                  sleep(200);
+                }
+                switch (qtype) {
+                case "selectList": { res = MTD_SELECT_LIST.invoke(QSTP[0], new Object[] { ns, pmap }); } break;
+                case "selectIter": { res = MTD_SELECT_CURSOR.invoke(QSTP[0], new Object[] { ns, pmap }); } break;
+                case "select": { res = MTD_SELECT_ONE.invoke(QSTP[0], new Object[] { ns, pmap }); } break;
+                case "update": { res = MTD_UPDATE.invoke(QSTP[0], new Object[] { ns, pmap }); } break;
+                case "insert": { res = MTD_INSERT.invoke(QSTP[0], new Object[] { ns, pmap }); } break;
+                case "delete": { res = MTD_DELETE.invoke(QSTP[0], new Object[] { ns, pmap }); } break;
+                default: }
+                return res;
+              });
+              /** SQL맵 등록 */
+              log.debug("REGISTER-BEAN:{} / {}", cls, bean);
+              MTD_REGISTER_RESOLVABLE_DEPENDENCY.invoke(beanFactory, new Object[] { cls, bean });
+            } catch (Exception e) { log.info("E:", e); }
+            continue LOOP1;
+          }
+				}
       };
+      // ret = (appctx, source) -> { };
     } catch (Exception e) {
       log.debug("E:", e);
     }
