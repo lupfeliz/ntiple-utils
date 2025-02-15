@@ -16,7 +16,7 @@ plugins {
 }
 
 group = 'com.ntiple'
-version = '0.0.4-12'
+version = '0.0.4-15'
 
 java {
   sourceCompatibility = JavaVersion.VERSION_1_8
