@@ -51,7 +51,6 @@ public class MybatisConfigUtil {
   private static Constructor<?> CNS_SQLSESSION_FACTORY_BEAN;
   private static Constructor<?> CNS_RESOURCE_PATTERN_RESOLVER;
   private static Constructor<?> CNS_JNDI_DATA_SOURCE_LOOKUP;
-  // private static Constructor<?> CNS_DATA_SOURCE_TRANSACTION_MANAGER;
   private static Constructor<?> CNS_SQL_SESSION_TEMPLATE;
 
   private static Method MTD_GET_BEAN_FACTORY;
@@ -60,7 +59,6 @@ public class MybatisConfigUtil {
   private static Method MTD_SET_DATA_SOURCE;
   private static Method MTD_SET_CONFIG_LOCATION;
   private static Method MTD_GET_SQLSESSION_FACTORY;
-  // private static Method MTD_REGISTER_SINGLETON;
   private static Method MTD_RESOURCE_GET_INPUT_STREAM;
   private static Method MTD_REGISTER_RESOLVABLE_DEPENDENCY;
   private static Method MTD_GET_JNDI_DATA_SOURCE;
@@ -89,14 +87,12 @@ public class MybatisConfigUtil {
       Class<?> CLS_RESOURCE_PATTERN_RESOLVER = findClass("org.springframework.core.io.support.ResourcePatternResolver");
       Class<?> CLS_PATH_MATCHING_RESOURCE_PATTERN_RESOLVER = findClass("org.springframework.core.io.support.PathMatchingResourcePatternResolver");
       Class<?> CLS_JNDI_DATA_SOURCE_LOOKUP = findClass("org.springframework.jdbc.datasource.lookup.JndiDataSourceLookup");
-      // Class<?> CLS_DATA_SOURCE_TRANSACTION_MANAGER = findClass("org.springframework.jdbc.datasource.DataSourceTransactionManager");
       Class<?> CLS_SQL_SESSION_TEMPLATE = findClass("org.mybatis.spring.SqlSessionTemplate");
       Class<?> CLS_DEFAULT_LISTABLE_BEAN_FACTORY = findClass("org.springframework.beans.factory.support.DefaultListableBeanFactory");
 
       CNS_SQLSESSION_FACTORY_BEAN = findConstructor(CLS_SQLSESSION_FACTORY_BEAN);
       CNS_RESOURCE_PATTERN_RESOLVER = findConstructor(CLS_PATH_MATCHING_RESOURCE_PATTERN_RESOLVER);
       CNS_JNDI_DATA_SOURCE_LOOKUP = findConstructor(CLS_JNDI_DATA_SOURCE_LOOKUP);
-      // CNS_DATA_SOURCE_TRANSACTION_MANAGER = findConstructor(CLS_DATA_SOURCE_TRANSACTION_MANAGER, new Class[] { DataSource.class });
       CNS_SQL_SESSION_TEMPLATE = findConstructor(CLS_SQL_SESSION_TEMPLATE, new Class[] { CLS_SQL_SESSION_FACTORY });
 
       MTD_GET_BEAN_FACTORY = findMethod(CLS_CONFIGURABLE_LISTABLE_BEAN_FACTORY, "getBeanFactory", EMPTY_CLS);
@@ -106,7 +102,6 @@ public class MybatisConfigUtil {
       MTD_SET_DATA_SOURCE = findMethod(CLS_SQLSESSION_FACTORY_BEAN, "setDataSource", new Class[] { DataSource.class });
       MTD_SET_CONFIG_LOCATION = findMethod(CLS_SQLSESSION_FACTORY_BEAN, "setConfigLocation", new Class[] { CLS_RESOURCE });
       MTD_GET_SQLSESSION_FACTORY = findMethod(CLS_SQLSESSION_FACTORY_BEAN, "getObject", EMPTY_CLS);
-      // MTD_REGISTER_SINGLETON = findMethod(CLS_DEFAULT_LISTABLE_BEAN_FACTORY, "registerSingleton", new Class[] { String.class, Object.class });
       MTD_REGISTER_RESOLVABLE_DEPENDENCY = findMethod(CLS_DEFAULT_LISTABLE_BEAN_FACTORY, "registerResolvableDependency", new Class[] { Class.class, Object.class });
       MTD_GET_JNDI_DATA_SOURCE = findMethod(CLS_JNDI_DATA_SOURCE_LOOKUP, "getDataSource", new Class[]{ String.class });
       MTD_SET_TYPE_ALIASES = findMethod(CLS_SQLSESSION_FACTORY_BEAN, "setTypeAliases");
@@ -170,12 +165,12 @@ public class MybatisConfigUtil {
         for (Annotation an : ans) {
           Class<? extends Annotation> type = an.annotationType();
           if (CLS_ALIAS.isAssignableFrom(type)) {
-            log.debug("FOUND TYPE ALIAS:{} / {}", cls, an);
+            log.trace("FOUND TYPE ALIAS:{} / {}", cls, an);
             alsLst.add(cls);
           }
         }
         if (CLS_TYPE_HANDLER.isAssignableFrom(cls)) {
-          log.debug("FOUND TYPE HANDLER:{}", cls);
+          log.trace("FOUND TYPE HANDLER:{}", cls);
           hndLst.add(cast(findConstructor(cls).newInstance(), CLS_TYPE_HANDLER));
         }
       } catch(Exception e) {
@@ -287,7 +282,6 @@ public class MybatisConfigUtil {
       applyTypeProcess(qsFactoryBean, loader, pkgs);
       Object[] QSFC = new Object[1];
       Object[] QSTP = new Object[1];
-      // Object[] QTRX = new Object[1];
       ret = new MybatisConfig<F, T> () {
         @Override public F getSqlFactory(Object appctx, DataSource source) {
           try {
@@ -296,24 +290,8 @@ public class MybatisConfigUtil {
             log.debug("configSqlSession / {} / {}", appctx.getClass(), beanFactory.getClass());
             MTD_SET_CONFIG_LOCATION.invoke(qsFactoryBean, MTD_GET_RESOURCE.invoke(appctx, new Object[] { pthMyaatis }));
             QSFC[0] = MTD_GET_SQLSESSION_FACTORY.invoke(qsFactoryBean, EMPTY_OBJ);
-            // /** SQL팩토리 등록 */
-            // if (nameSqlfctr != null && !"".equals(nameSqlfctr)) {
-            //   // log.debug("REGISTER-BEAN:{} / {}", nameSqlfctr, QSFC[0]);
-            //   MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqlfctr, QSFC[0] });
-            // }
-            /** 트랜잭션 매니저 등록 */
-            // QTRX[0] = CNS_DATA_SOURCE_TRANSACTION_MANAGER.newInstance(source);
-            // if (nameSqltrnx != null && !"".equals(nameSqltrnx)) {
-            //   log.debug("REGISTER-BEAN:{} / {}", nameSqltrnx);
-            //   MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqltrnx, CNS_DATA_SOURCE_TRANSACTION_MANAGER.newInstance(source) });
-            // }
             // /** SQL 템플릴 생성 */
             QSTP[0] = CNS_SQL_SESSION_TEMPLATE.newInstance(QSFC[0]);
-            // /** SQL 템플릿 등록 */
-            // if (nameSqltmpl != null && !"".equals(nameSqltmpl)) {
-            //   log.debug("REGISTER-BEAN:{} / {}", nameSqltmpl, QSTP[0]);
-            //   MTD_REGISTER_SINGLETON.invoke(beanFactory, new Object[] { nameSqltmpl, QSTP[0] });
-            // }
           } catch (Exception e) {
             log.debug("E:", e);
           }
@@ -324,7 +302,6 @@ public class MybatisConfigUtil {
           T ret = cast(QSTP[0], ret = null);
           return ret;
         }
-        // @Override public Object getSqlTransaction() { return QTRX[0]; }
         @Override public void registMappers(Object appctx) {
           Object beanFactory = null;
           LOOP1: for (final MapperInfo info : mapperList) {
@@ -362,14 +339,13 @@ public class MybatisConfigUtil {
                 return res;
               });
               /** SQL맵 등록 */
-              log.debug("REGISTER-BEAN:{} / {}", cls, bean);
+              log.trace("REGISTER-MAPPER:{} / {}", cls, bean);
               MTD_REGISTER_RESOLVABLE_DEPENDENCY.invoke(beanFactory, new Object[] { cls, bean });
             } catch (Exception e) { log.info("E:", e); }
             continue LOOP1;
           }
         }
       };
-      // ret = (appctx, source) -> { };
     } catch (Exception e) {
       log.debug("E:", e);
     }
@@ -378,7 +354,6 @@ public class MybatisConfigUtil {
 
   public static interface MybatisConfig<F, T> {
     public F getSqlFactory(Object appctx, DataSource source);
-    // public Object getSqlTransaction();
     public T getSqlTemplate();
     public void registMappers(Object appctx);
   }
