@@ -48,6 +48,16 @@ public class LRUCache<K, V> {
     return node.value;
   }
 
+  public V getOrFetch(K key, Fn0a<V> callback) { return getOrFetch(key, callback, -1); }
+  public V getOrFetch(K key, Fn0a<V> callback, long expiry) {
+    V ret = null;
+    synchronized(this) { if (debouncer == null) { debouncer = new Debouncer(); } }
+    if ((ret = this.get(key, 0)) == null) {
+      put(key, ret = callback.apply(), expiry);
+    }
+    return ret;
+  }
+
   public V getAsync(K key, Fn0a<V> callback, long delay) { return getAsync(key, callback, delay, -1); }
   public V getAsync(K key, Fn0a<V> callback, long delay, long expiry) {
     V ret = null;
@@ -254,7 +264,7 @@ public class LRUCache<K, V> {
 //     capacity = 0;
 //     cacheList = [];
 //     cacheMap = {};
-//     handleMap = {};
+//     debounceMap = {};
 //     expiry = 0;
 //     constructor(capacity, expiry = 1000 * 10) {
 //       this.capacity = capacity;
@@ -264,24 +274,42 @@ public class LRUCache<K, V> {
 //     };
 //     get(key, expiry = -1) {
 //       let node = this.cacheMap[key];
+//       // log.debug("NODE:", key, node);
 //       if (node === undefined) { return undefined; };
+//       // log.debug("CHECK-EXPIRE:", node.expire < new Date().getTime());
 //       if (node.expire < new Date().getTime()) {
 //         this.remove(key);
 //         return undefined;
 //       };
 //       if (expiry < 0) { expiry = this.expiry; };
-//       node.expire = new Date().getTime() + expiry;
+//       if (expiry > 0) { node.expire = new Date().getTime() + expiry; };
 //       this.moveToHead(node);
 //       return node.value;
+//     };
+//     async getOrFetch(key, callback, delay, expiry = -1) {
+//       let ret = undefined;
+//       const self = this;
+//       // log.debug("GET-ASYNC:", key, self.get(key, 0));
+//       if ((ret = self.get(key, 0)) === undefined) {
+//         // log.debug("GET-FROM-API:", key);
+//         self.put(key, ret = await callback(), expiry);
+//       };
+//       return ret;
 //     };
 //     async getAsync(key, callback, delay, expiry = -1) {
 //       let ret = undefined;
 //       const self = this;
+//       // log.debug("GET-ASYNC:", key, self.get(key, 0));
 //       if ((ret = self.get(key, 0)) !== undefined) {
-//         if (self.handleMap[key]) { clearTimeout(self.handleMap[key]); };
-//         self.handleMap[key] = setTimeout(async function() { self.put(key, await callback(), expiry); }, delay);
+//         // log.debug("GET-FROM-CACHE:", key);
+//         if (self.debounceMap[key]) {
+//           clearTimeout(self.debounceMap[key]);
+//           delete self.debounceMap[key];
+//         };
+//         self.debounceMap[key] = setTimeout(async function() { self.put(key, await callback(), expiry); }, delay);
 //       } else {
-//         self.put(key, ret = await callback());
+//         // log.debug("GET-FROM-API:", key);
+//         self.put(key, ret = await callback(), expiry);
 //       };
 //       return ret;
 //     };
@@ -289,17 +317,16 @@ public class LRUCache<K, V> {
 //       let node = this.cacheMap[key];
 //       if (node !== undefined) {
 //         node.value = value;
-//         node.expire - new Date().getTime() + this.expiry;
+//         if (expiry < 0) { expiry = this.expiry; };
+//         if (expiry > 0) { node.expire = new Date().getTime() + expiry; };
 //         this.moveToHead(node);
 //         return;
 //       };
 //       let newNode = new DoublyLinkedNode(key, value);
 //       this.cacheList.addFirst(newNode);
-//       if (!expiry) { expiry = this.expiry; };
-//       newNode.expire = new Date().getTime() + expiry;
-//       if (this.cacheList.size() > this.capacity) {
-//         this.removeLeast();
-//       }
+//       if (expiry < 0) { expiry = this.expiry; };
+//       if (expiry > 0) { newNode.expire = new Date().getTime() + expiry; };
+//       if (this.cacheList.size() > this.capacity) { this.removeLeast(); };
 //       this.cacheMap[key] = newNode;
 //     };
 //     remove(key) {
@@ -352,12 +379,28 @@ public class LRUCache<K, V> {
 //           this.cacheList.head = node;
 //         } else {
 //           prev.next = node;
-//         }
+//         };
 //         node.prev = prev;
 //         this.cacheList.tail = node;
 //         this.cacheMap[itm.k] = node;
 //         prev = node;
 //       };
+//     };
+//     clear() {
+//       clear(this.cacheMap);
+//       this.cacheList.clear();
+//     };
+//     saveToStorage(key) {
+//       if (!key) { return; };
+//       try {
+//         window.localStorage.setItem(key, this.stringify());
+//       } catch (e) { log.debug("E:", e); };
+//     };
+//     loadFromStorage(key) {
+//       if (!key) { return; };
+//       try {
+//         this.parse(window.localStorage.getItem(key));
+//       } catch (e) { log.debug("E:", e); };
 //     };
 //   };
 //   class DoublyLinkedNode {
@@ -415,8 +458,8 @@ public class LRUCache<K, V> {
 //           this.remove(node);
 //           node = prev;
 //           continue LOOP;
-//         }
-//         if (node.prev !== undefined) { break LOOP; }
+//         };
+//         if (node.prev !== undefined) { break LOOP; };
 //         node = node.prev;
 //       };
 //     };
@@ -430,16 +473,20 @@ public class LRUCache<K, V> {
 //       };
 //       return size;
 //     };
-//     // dump(limit) {
-//     //   let size = 0;
-//     //   let node = this.head;
-//     //   while (node !== undefined && size < limit) {
-//     //     log.debug("NODE:", node);
-//     //     size += 1;
-//     //     if (node.next === undefined) { break; };
-//     //     node = node.next;
-//     //   };
-//     // };
+//     clear() {
+//       let size = 0;
+//       let node = this.head;
+//       while (node !== undefined) {
+//         if (node.next === undefined) { break; };
+//         tmp = node;
+//         node = node.next;
+//         tmp.next = undefined;
+//         tmp.prev = undefined;
+//       };
+//       this.head = undefined;
+//       this.tail = undefined;
+//       return size;
+//     };
 //     dump() {
 //       let ret = "";
 //       // let size = 0;
@@ -448,22 +495,11 @@ public class LRUCache<K, V> {
 //       while (node !== undefined) {
 //         if (ret) { ret = `${ret},`; };
 //         let value = node.value;
-//         // if (typeof value === "string") {
-//         //   value = `s:${value}`;
-//         // } else if (typeof value === "number") {
-//         //   value = `n:${value}`;
-//         // } else {
-//         //   value = `o:${JSON.stringify(value)}`;
-//         // }
-//         // ret = `${ret}{"k":"${node.key}","v":"${value}","t":${node.expire}}`;
 //         list.push({ k: node.key, v: value, t: node.expire });
 //         // size += 1;
 //         if (node.next === undefined) { break; };
 //         node = node.next;
 //       };
-//       // if (ret) { ret = `[${ret}]`; };
-//       // if (list.length > 0) { ret = JSON.stringify(list); };
-//       // return ret;
 //       return list;
 //     };
 //   };
