@@ -11,9 +11,9 @@ import static com.ntiple.commons.ConvertUtil.array;
 import static com.ntiple.commons.IOUtil.readAsString;
 import static com.ntiple.commons.IOUtil.safeclose;
 import static com.ntiple.commons.ProcUtil.sleep;
-import static com.ntiple.commons.ReflectionUtil.cast;
 import static com.ntiple.commons.ReflectionUtil.EMPTY_CLS;
 import static com.ntiple.commons.ReflectionUtil.EMPTY_OBJ;
+import static com.ntiple.commons.ReflectionUtil.cast;
 import static com.ntiple.commons.ReflectionUtil.findClass;
 import static com.ntiple.commons.ReflectionUtil.findConstructor;
 import static com.ntiple.commons.ReflectionUtil.findMethod;
@@ -36,6 +36,7 @@ import java.util.Map;
 import javax.sql.DataSource;
 
 import com.ntiple.commons.FunctionUtil.Fn1at;
+import com.ntiple.commons.FunctionUtil.Fn5avt;
 
 public class MybatisConfigUtil {
   private static final SimpleLogger log = SimpleLogger.getLogger();
@@ -196,18 +197,14 @@ public class MybatisConfigUtil {
   }
 
   public static <F, T> MybatisConfig<F, T> configMybatis(
-    Class<?> selfCls,
-    Map<String, Object> defaultPrm,
-    String pthMyaatis, String ptnRsrc,
-    String[] pkgs) {
-    return configMybatis(selfCls,
-      defaultPrm, pthMyaatis, ptnRsrc, pkgs, null);
+    Class<?> selfCls, Map<String, Object> defaultPrm,
+    String pthMyaatis, String ptnRsrc, String[] pkgs) {
+    return configMybatis(selfCls, defaultPrm, pthMyaatis, ptnRsrc, pkgs, null, null);
   }
   public static <F, T> MybatisConfig<F, T> configMybatis(
-    Class<?> selfCls,
-    Map<String, Object> defaultPrm,
-    String pthMyaatis, String ptnRsrc,
-    String[] pkgs, Fn1at<String, String> xmltr) {
+    Class<?> selfCls, Map<String, Object> defaultPrm,
+    String pthMyaatis, String ptnRsrc, String[] pkgs, Fn1at<String, String> xmltr, 
+    Map<String, Fn5avt<String, Map<String, Object>, Object, Method, Object[]>> intcpts) {
     MybatisConfig<F, T> ret = null;
     try {
       ClassLoader loader = selfCls.getClassLoader();
@@ -299,7 +296,9 @@ public class MybatisConfigUtil {
           return ret;
         }
         @Override public T getSqlTemplate() {
-          T ret = cast(QSTP[0], ret = null);
+          T ret = null;
+          for (int retry = 0; QSTP[0] != null && retry < 10; retry++) { sleep(200); }
+          ret = cast(QSTP[0], ret);
           return ret;
         }
         @Override public void registMappers(Object appctx) {
@@ -310,11 +309,14 @@ public class MybatisConfigUtil {
               /** SQL맵 생성 */
               Object inst = new Object();
               Class<?> cls = info.cls;
-              Object bean = Proxy.newProxyInstance(cls.getClassLoader(), array(cls), (prx, mtd, arg) -> {
+              Object mapper = Proxy.newProxyInstance(cls.getClassLoader(), array(cls), (prx, mtd, arg) -> {
+                Object res = null;
                 String mname = mtd.getName();
                 switch (mname) {
                 case "toString": { return cat(cls.getName(), inst.toString()); }
-                case "equals": { return inst.equals(arg[0]); }
+                case "hashCode": { return inst.hashCode(); }
+                case "getClass": { return cls; }
+                case "equals": { return inst.equals(prx); }
                 default: }
                 String ns = cat(info.className, ".", mname);
                 Map<String, Object> pmap = new LinkedHashMap<>();
@@ -323,11 +325,8 @@ public class MybatisConfigUtil {
                 if (qtype == null) { return null; }
                 if (defaultPrm != null) { pmap.putAll(defaultPrm); }
                 for (int inx = 0; pnames != null && inx < pnames.length && inx < arg.length; inx++) { pmap.put(pnames[inx], arg[inx]); }
-                Object res = null;
-                for (int retry = 0; retry < 10; retry++) {
-                  if (QSTP[0] != null) { break; }
-                  sleep(200);
-                }
+                for (int retry = 0; QSTP[0] != null && retry < 10; retry++) { sleep(200); }
+                if (intcpts != null && intcpts.containsKey(ns)) { intcpts.get(ns).apply(qtype, pmap, prx, mtd, arg); }
                 switch (qtype) {
                 case "selectList": { res = MTD_SELECT_LIST.invoke(QSTP[0], new Object[] { ns, pmap }); } break;
                 case "selectIter": { res = MTD_SELECT_CURSOR.invoke(QSTP[0], new Object[] { ns, pmap }); } break;
@@ -339,8 +338,8 @@ public class MybatisConfigUtil {
                 return res;
               });
               /** SQL맵 등록 */
-              log.trace("REGISTER-MAPPER:{} / {}", cls, bean);
-              MTD_REGISTER_RESOLVABLE_DEPENDENCY.invoke(beanFactory, new Object[] { cls, bean });
+              log.trace("REGISTER-MAPPER:{} / {}", cls, mapper);
+              MTD_REGISTER_RESOLVABLE_DEPENDENCY.invoke(beanFactory, new Object[] { cls, mapper });
             } catch (Exception e) { log.info("E:", e); }
             continue LOOP1;
           }
